@@ -35,11 +35,6 @@ class Role extends Model
     }
 
     // polymorphic many to many
-    public function candidates()
-    {
-        return $this->morphedByMany(Candidate::class, 'roleable');
-    }
-
     public function sharelinks()
     {
         return $this->morphToMany(Sharelink::class, 'shareable');

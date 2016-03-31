@@ -33,24 +33,10 @@ CanResetPasswordContract
     // one user to many
 
     // many users to one
-    public function language()
-    {
-        return $this->belongsTo(Language::class);
-    }
 
     // many trough
 
     // many to many
-    public function artists()
-    {
-        return $this->belongsToMany(Artist::class);
-    }
-
-    public function messagethreads()
-    {
-        return $this->belongsToMany(Messagethread::class);
-    }
-
     public function posts()
     {
         return $this->belongsToMany(Post::class);
@@ -63,11 +49,6 @@ CanResetPasswordContract
     }
 
     // polymorphic many to many
-    public function likes()
-    {
-        return $this->morphToMany(Like::class, 'likeable');
-    }
-
     public function sharelinks()
     {
         return $this->morphToMany(Sharelink::class, 'shareable');

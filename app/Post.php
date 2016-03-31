@@ -26,17 +26,8 @@ class Post extends Model
     // one post on one
 
     // one post to many
-    public function streams()
-    {
-        return $this->hasMany(Stream::class);
-    }
 
     // many posts to one
-    public function poll()
-    {
-        return $this->belongsTo(Poll::class);
-    }
-
     public function subtype()
     {
         return $this->belongsTo(Subtype::class);
@@ -55,21 +46,6 @@ class Post extends Model
         return $this->belongsToMany(Album::class);
     }
 
-    public function storystreams()
-    {
-        return $this->belongsToMany(Storystream::class);
-    }
-
-    public function subscriptions()
-    {
-        return $this->belongsToMany(Subscription::class);
-    }
-
-    public function tracks()
-    {
-        return $this->belongsToMany(Track::class);
-    }
-
     public function users()
     {
         return $this->belongsToMany(User::class);
@@ -82,11 +58,6 @@ class Post extends Model
     }
 
     // many to many polymorphic
-    public function likes()
-    {
-        return $this->morphToMany(Like::class, 'likeable');
-    }
-
     public function sharelinks()
     {
         return $this->morphToMany(Sharelink::class, 'shareable');

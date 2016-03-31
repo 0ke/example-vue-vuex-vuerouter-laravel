@@ -37,26 +37,6 @@ class Sharelink extends Model
     // polymorphic
 
     // many to many polymorphic
-    public function albums()
-    {
-        return $this->morphedByMany(Album::class, 'shareable');
-    }
-
-    public function artists()
-    {
-        return $this->morphedByMany(Artist::class, 'shareable');
-    }
-
-    public function candidates()
-    {
-        return $this->morphedByMany(Candidate::class, 'shareable');
-    }
-
-    public function polls()
-    {
-        return $this->morphedByMany(Poll::class, 'shareable');
-    }
-
     public function posts()
     {
         return $this->morphedByMany(Post::class, 'shareable');
@@ -65,16 +45,6 @@ class Sharelink extends Model
     public function roles()
     {
         return $this->morphedByMany(Role::class, 'shareable');
-    }
-
-    public function storystreams()
-    {
-        return $this->morphedByMany(Storystream::class, 'shareable');
-    }
-
-    public function tracks()
-    {
-        return $this->morphedByMany(Track::class, 'shareable');
     }
 
     public function users()
