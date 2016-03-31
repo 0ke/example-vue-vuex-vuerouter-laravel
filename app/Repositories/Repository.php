@@ -1,18 +1,13 @@
 <?php
 namespace App\Repositories;
 
-use App\Album;
-use App\Candidate;
 use App\Contactmessage;
 use App\Helpers\ImagePutter;
 use App\Icon;
-use App\Log;
-use App\Permission;
 use App\Post;
 use App\Role;
 use App\Seo;
 use App\Sharelink;
-use App\Storystream;
 use App\Subtype;
 use App\Type;
 use App\User;
@@ -20,32 +15,24 @@ use App\User;
 class Repository
 {
     public function __construct(
-        Album $album,
-        Candidate $candidate,
         Contactmessage $cmessage,
         Icon $icon,
         ImagePutter $imageputter,
-        Log $log,
         Permission $permission,
         Post $post,
         Role $role,
         Seo $seo,
         Sharelink $sharelink,
-        Storystream $storystream,
         Subtype $subtype,
         Type $type,
         User $user) {
-        $this->album = $album;
-        $this->candidate = $candidate;
         $this->contactmessage = $cmessage;
         $this->icon = $icon;
-        $this->log = $log;
         $this->permission = $permission;
         $this->post = $post;
         $this->role = $role;
         $this->seo = $seo;
         $this->sharelink = $sharelink;
-        $this->storystream = $storystream;
         $this->subtype = $subtype;
         $this->type = $type;
         $this->user = $user;
