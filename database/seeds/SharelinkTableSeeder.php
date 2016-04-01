@@ -33,27 +33,10 @@ class SharelinkTableSeeder extends Seeder
             ['user_id' => 4, 'url' => 'http://jonasvanderhaegen.be/', 'icon_id' => 11, 'u_id' => null],
         ];
 
-        $artistshares = [
-            ['artist_id' => 1, 'url' => 'https://www.facebook.com/Loscobeats', 'icon_id' => 1, 'u_id' => null],
-            ['artist_id' => 1, 'url' => 'https://www.instagram.com/Loscobeats/', 'icon_id' => 4, 'u_id' => null],
-            ['artist_id' => 1, 'url' => 'https://be.linkedin.com/in/losco-beats-2b687488', 'icon_id' => 5, 'u_id' => null],
-            ['artist_id' => 1, 'url' => 'https://play.spotify.com/artist/1zzFdBVISHy7S3Tqlid87P', 'icon_id' => 8, 'u_id' => null],
-            ['artist_id' => 1, 'url' => 'https://soundcloud.com/loscobeats', 'icon_id' => 7, 'u_id' => null],
-            ['artist_id' => 1, 'url' => 'https://twitter.com/Loscobeats', 'icon_id' => 9, 'u_id' => null],
-            ['artist_id' => 1, 'url' => 'http://beatsbylosco.bandcamp.com/', 'icon_id' => 11, 'u_id' => null],
-        ];
-
         foreach ($usershares as $key => $share) {
             $s = \App\Sharelink::create(['url' => $share['url'], 'icon_id' => $share['icon_id'], 'user_id' => $share['u_id']]);
 
             \App\User::find($share['user_id'])->sharelinks()->attach($s->id);
         }
-
-        foreach ($artistshares as $key => $share) {
-            $s = \App\Sharelink::create(['url' => $share['url'], 'icon_id' => $share['icon_id'], 'user_id' => $share['u_id']]);
-
-            \App\Artist::find($share['artist_id'])->sharelinks()->attach($s->id);
-        }
-
     }
 }
