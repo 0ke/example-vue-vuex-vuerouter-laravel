@@ -47,35 +47,7 @@ class HomeController extends Controller
     }
     public function home()
     {
-        if (request()->ajax()) {
-            return response()->json([
-                'locale' => session()->get('locale', 'nl'),
-                'sliderposts' => $this->repo->orderBy('post', 'created_at', 'desc', ['type', 'subtype'])->take(6)->get(['id', 'type_id', 'subtype_id']),
-                'rightfromsliderposts' => $this->repo->orderBy('post', 'created_at', 'desc')->take(4)->get(['posts.id']),
-                'section2' => ['type' => $this->repo->findSeoble('culture'), 'posts' => $this->repo->findSeoble('culture')->subposts()->with('type', 'subtype')->whereConcept(0)->take(3)->get(['posts.id'])],
-                'section3' => ['type' => $this->repo->findSeoble('fashion'), 'posts' => $this->repo->findSeoble('fashion')->subposts()->whereConcept(0)->take(3)->get(['posts.id'])],
-                'sectiontabs' => [
-                    'videonews' => [
-                        'featured' => $this->repo->findSeoble('news')->subposts()->where('videourl', '!=', '')->whereConcept(0)->first(),
-                        'other' => $this->repo->findSeoble('news')->subposts()->where('videourl', '!=', '')->whereConcept(0)->take(9)->skip(1)->get(['posts.id']),
-                    ],
-                    'moviereviews' => [
-                        'featured' => $this->repo->findSeoble('media')->posts()->whereConcept(0)->first(),
-                        'other' => $this->repo->findSeoble('media')->posts()->whereConcept(0)->take(8)->skip(1)->get(['posts.id']),
-                    ],
-                    'music' => [
-                        'featured' => $this->repo->findSeoble('music')->posts()->whereConcept(0)->first(),
-                        'other' => $this->repo->findSeoble('music')->posts()->whereConcept(0)->take(6)->get(['posts.id']),
-                    ],
-                    'opinionpolls' => [
-                        'featured' => $this->repo->findSeoble('culture')->subposts()->whereConcept(0)->first(),
-                        'other' => $this->repo->findSeoble('culture')->subposts()->whereConcept(0)->take(5)->get(['posts.id']),
-                    ],
-                ],
-                'section5' => ['type' => $this->repo->findSeoble('news'), 'posts' => $this->repo->findSeoble('news')->subposts()->whereConcept(0)->take(8)->get(['posts.id'])],
-            ]);
-        }
-        return redirect('/');
+        return view('welcome');
     }
 
     public function about()

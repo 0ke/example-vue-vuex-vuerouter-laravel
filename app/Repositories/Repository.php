@@ -4,6 +4,7 @@ namespace App\Repositories;
 use App\Contactmessage;
 use App\Helpers\ImagePutter;
 use App\Icon;
+use App\Permission;
 use App\Post;
 use App\Role;
 use App\Seo;

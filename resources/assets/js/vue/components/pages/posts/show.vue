@@ -1,5 +1,21 @@
 <template>
 
+ <!-- Page Content -->
+<div class="container">
+
+    <!-- Page Header -->
+    <div class="row" transition="googletransition" v-show="animateThis">
+        <div class="col-lg-8">
+        	<img v-bind:src="'img/posts/'+ post.id +'/sizes/860.jpg'" alt="">
+            <h1 class="page-header">{{ post | seo 'title' }}</h1>
+            <h4> {{ post | seo 'short' }} </h4>
+            {{{ post | seo 'body' }}}
+        </div>
+    </div>
+
+
+</div>
+
 </template>
 
 <script type="stylus">
@@ -16,6 +32,8 @@ export default {
 	name: 'Post_Show',
 	data : function() {
 		return {
+			animateThis: false,
+
 			post: {
 				id: 1,
 				concept: "",
@@ -70,10 +88,7 @@ export default {
 				users: []
 			},
 			previous :{},
-			next :{},
-			related: {},
-			locale: {},
-			animateThis: false
+			next :{}
 		}
 	},
 	route: {

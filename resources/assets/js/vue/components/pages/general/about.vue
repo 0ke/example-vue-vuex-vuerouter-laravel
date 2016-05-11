@@ -247,7 +247,11 @@ route: {
             
         <p>Be aware! when you refresh: the mutated data in Vuex store is not saved and won't be saved. I save it in (browser) local- or sessionStorage, for now. </p>
 
-        <p>Last but not least: You do need to import vuex and the store/index.js In the App component that is an extension. Go and take a look there.</p>
+        <p>Last but not least: You do need to import vuex and the store/index.js In the App component that is an extension. Go and take a look there. If you're interested this goes deeper about how vuex and redux works and is designed.</p>
+
+        <div class="embed-responsive embed-responsive-16by9">
+          <iframe class="embed-responsive-item" src="https://www.youtube.com/embed/l1KHL-TX3qs"></iframe>
+        </div>
         </div>
     </div>
 

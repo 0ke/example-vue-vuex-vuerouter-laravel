@@ -11,10 +11,12 @@
 |
  */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', 'HomeController@home');
 
 Route::get('categories-for-menu', function () {
     return response()->json(['categories' => App\Type::with('seo', 'subtypes')->get()]);
 });
+
+Route::get('article/{slug}', 'PostController@show');
+Route::get('{type}/{subtype}', 'SubtypeController@index');
+Route::get('{type}', 'TypeController@index');

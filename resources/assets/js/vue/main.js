@@ -10,6 +10,11 @@ Vue.config.debug = true;
 Vue.use(VueResource)
 Vue.use(VueRouter)
 
+Vue.transition('googletransition',{
+	enterClass: 'fadeIn',
+	leaveClass: 'fadeOut'
+})
+
 const router = new VueRouter({
   //history: true,
   saveScrollPosition: true,
@@ -18,14 +23,7 @@ const router = new VueRouter({
 sync(store, router)
 configRouter(router)
 
-Vue.transition('googletransition', {
-	enterClass: 'fadeInUp',
-	leaveClass: 'fadeOutDown'
-})
-Vue.transition('googletransition2', {
-	enterClass: 'fadeIn',
-	leaveClass: 'fadeOut'
-})
+
 
 const App = Vue.extend(require('./app.vue'))
 router.start(App,'#app')

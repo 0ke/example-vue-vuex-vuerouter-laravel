@@ -1,109 +1,30 @@
 <template>
 
  <!-- Page Content -->
-<div class="container">
+<div class="container animated" transition="googletransition" v-show="animateThis">
 
     <!-- Page Header -->
     <div class="row">
         <div class="col-lg-12">
-            <h1 class="page-header">Home
-                <small>Secondary Text</small>
+            <h1 class="page-header">{{$route.params.type | uppercase }}
+                <small v-if="$route.params.subtype">{{$route.params.subtype | uppercase }}</small>
             </h1>
         </div>
     </div>
     <!-- /.row -->
 
     <!-- Projects Row -->
-    <div class="row">
-        <div class="col-md-4 portfolio-item">
-            <a href="#">
-                <img class="img-responsive" src="http://placehold.it/700x400" alt="">
+    <div class="row" v-for="post in posts" style="margin-bottom:15px;">
+        <div class="col-md-4">
+            <a v-link="{ name: 'post.show', params: { slug: post.seo[0].slug_nl }}">
+                <img class="img-responsive" v-bind:src="'img/posts/'+ post.id +'/sizes/860.jpg'" alt="">
             </a>
-            <h3>
-                <a href="#">Project Name</a>
-            </h3>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
         </div>
-        <div class="col-md-4 portfolio-item">
-            <a href="#">
-                <img class="img-responsive" src="http://placehold.it/700x400" alt="">
-            </a>
+        <div class="col-md-8 portfolio-item">
             <h3>
-                <a href="#">Project Name</a>
+                <a v-link="{ name: 'post.show', params: { slug: post.seo[0].slug_nl }}">{{ post | seo 'title' }}</a>
             </h3>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
-        </div>
-        <div class="col-md-4 portfolio-item">
-            <a href="#">
-                <img class="img-responsive" src="http://placehold.it/700x400" alt="">
-            </a>
-            <h3>
-                <a href="#">Project Name</a>
-            </h3>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
-        </div>
-    </div>
-    <!-- /.row -->
-
-    <!-- Projects Row -->
-    <div class="row">
-        <div class="col-md-4 portfolio-item">
-            <a href="#">
-                <img class="img-responsive" src="http://placehold.it/700x400" alt="">
-            </a>
-            <h3>
-                <a href="#">Project Name</a>
-            </h3>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
-        </div>
-        <div class="col-md-4 portfolio-item">
-            <a href="#">
-                <img class="img-responsive" src="http://placehold.it/700x400" alt="">
-            </a>
-            <h3>
-                <a href="#">Project Name</a>
-            </h3>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
-        </div>
-        <div class="col-md-4 portfolio-item">
-            <a href="#">
-                <img class="img-responsive" src="http://placehold.it/700x400" alt="">
-            </a>
-            <h3>
-                <a href="#">Project Name</a>
-            </h3>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
-        </div>
-    </div>
-
-    <!-- Projects Row -->
-    <div class="row">
-        <div class="col-md-4 portfolio-item">
-            <a href="#">
-                <img class="img-responsive" src="http://placehold.it/700x400" alt="">
-            </a>
-            <h3>
-                <a href="#">Project Name</a>
-            </h3>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
-        </div>
-        <div class="col-md-4 portfolio-item">
-            <a href="#">
-                <img class="img-responsive" src="http://placehold.it/700x400" alt="">
-            </a>
-            <h3>
-                <a href="#">Project Name</a>
-            </h3>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
-        </div>
-        <div class="col-md-4 portfolio-item">
-            <a href="#">
-                <img class="img-responsive" src="http://placehold.it/700x400" alt="">
-            </a>
-            <h3>
-                <a href="#">Project Name</a>
-            </h3>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
+            <p>{{ post | seo 'short' }}</p>
         </div>
     </div>
     <!-- /.row -->
@@ -147,7 +68,10 @@
 	                getUrl += '/' + this.$route.params.subtype
 	            }
 	            this.$http.get(getUrl).then(function(response) {
-	                if (!response.data.posts.length) { transition.abort() }
+	                if (!response.data.posts.length) { 
+	                	console.log('this category doesn\'t have any posts, go back.');
+	                	transition.abort() 
+	                }
 	                transition.next(response.data)
 	                this.animateThis = true
 	            });
@@ -167,13 +91,13 @@
 	            this.animateThis = false
 	            setTimeout(function() {
 	                next()
-	            }, 200)
+	            }, 100)
 	        },
 	        canReuse(transition) {
 	            this.animateThis = false
 	            setTimeout(function() {
 	                return true
-	            }, 200)
+	            }, 100)
 	        }
 	    },
 	    filters: {

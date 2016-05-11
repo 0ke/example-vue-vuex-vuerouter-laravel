@@ -6,5 +6,5 @@ elixir(function(mix) {
     .sass('app.scss')
     .scripts(['../../../node_modules/jquery/dist/jquery.min.js','../../../node_modules/bootstrap-sass/assets/javascripts/bootstrap.min.js'])
     //.version(['css/all.css','js/all.js','js/main.js'])
-    .browserSync({ proxy : 'uw url hier' });
+    .browserSync({ proxy : 'localhost:8000' });
 });
