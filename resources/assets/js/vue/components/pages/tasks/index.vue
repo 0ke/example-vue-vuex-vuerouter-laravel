@@ -65,87 +65,98 @@
   						<div class="col-md-12">
     						<h3>Vue code</h3>
 
-                <pre>
-                new Vue({
-                	el:'#tasks',
+<pre>
+export default {
+    data() {
+            return {
+                tasks: [{
+                    text: 'Ruim de tafel af',
+                    done: false
+                }, {
+                    text: 'Doe de afwas',
+                    done: true
+                }, {
+                    text: 'Zet het vuilnis buiten',
+                    done: false
+                }, {
+                    text: 'Doe uw riem aan',
+                    done: true
+                }, {
+                    text: 'Blijf van de chokotoffs af',
+                    done: false
+                }, {
+                    text: 'Breng mij een pintje',
+                    done: true
+                }],
+                newTask: ''
+            }
+        },
 
-                	data:{
-                		tasks:[
-                			{text:'Ruim de tafel af',done:false},
-                			{text:'Doe de afwas',done:true},
-                			{text:'Zet het vuilnis buiten',done:false},
-                			{text:'Doe uw riem aan',done:true},
-                			{text:'Blijf van de chokotoffs af',done:false},
-                			{text:'Breng mij een pintje',done:true}
-                		],
-
-                		newTask :''
-                	},
-
-                	computed:{
-                		completions: function(){
-                			return this.tasks.filter(function(task){
-                				return task.done;
-                			});
-                		},
-
-                		remaining : function(){
-                			return this.tasks.filter(function(task){
-                				return ! task.done;
-                			});
-                		}
-                	},
-
-                	filters:{
-                		inProcess: function(tasks) {
-                			return tasks.filter(function(task){
-                				return ! task.done;
-                			});
-                		}
-                	},
-
-                	methods:{
-                		addTask: function(e){
-                			e.preventDefault();
-
-                			if( ! this.newTask) return;
-
-                			this.tasks.push({
-                				text: this.newTask,
-                				done : false
-                			});
-
-                			this.newTask = '';
-                		},
-
-                		editTask: function(task){
-                			this.removeTask(task);
-                			this.newTask = task.text;
-                			this.el.focus();
-                		},
-
-                		toggleTaskCompletion: function(task){
-                			task.done = ! task.done;
-                		},
-
-                		completeAll: function(){
-                			this.tasks.forEach(function(task){
-                				task.done = true;
-                			});
-                		},
-
-                		removeTask: function(task){
-                			this.tasks.$remove(task);
-                		},
-
-                		clearCompleted: function(){
-                			this.tasks= this.tasks.filter(function(task){
-                				return ! task.done;
-                			});
-                		}
-                	}
+        computed: {
+            completions: function() {
+                return this.tasks.filter(function(task) {
+                    return task.done;
                 });
-                </pre>
+            },
+
+            remaining: function() {
+                return this.tasks.filter(function(task) {
+                    return !task.done;
+                });
+            }
+        },
+
+
+        filters: {
+            inProcess: function(tasks) {
+                return tasks.filter(function(task) {
+                    return !task.done;
+                });
+            }
+        },
+
+
+        methods: {
+            addTask: function(e) {
+                e.preventDefault();
+
+                if (!this.newTask) return;
+
+                this.tasks.push({
+                    text: this.newTask,
+                    done: false
+                });
+
+                this.newTask = '';
+            },
+
+            editTask: function(task) {
+                this.removeTask(task);
+                this.newTask = task.text;
+            },
+
+            toggleTaskCompletion: function(task) {
+                task.done = !task.done;
+            },
+
+            completeAll: function() {
+                this.tasks.forEach(function(task) {
+                    task.done = true;
+                });
+            },
+
+            removeTask: function(task) {
+                this.tasks.$remove(task);
+            },
+
+            clearCompleted: function() {
+                this.tasks = this.tasks.filter(function(task) {
+                    return !task.done;
+                });
+            }
+        }
+}
+</pre>
             </div>
           </div>
 

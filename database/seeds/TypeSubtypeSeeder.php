@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Seeder;
 use \App\Seo;
-use \App\Subtype;
 use \App\Type;
 
 class TypeSubtypeSeeder extends Seeder
@@ -19,21 +18,6 @@ class TypeSubtypeSeeder extends Seeder
             ['icon_id' => null, 'title' => 'Sport', 'visible' => true, 'position' => 50], //6
         ];
 
-        $subtypes = [
-            ['type_id' => 1, 'title' => 'Belgium', 'visible' => true, 'position' => 10], // 1
-            ['type_id' => 1, 'title' => 'World', 'visible' => true, 'position' => 20], // 1
-
-            ['type_id' => 3, 'title' => 'Art', 'visible' => true, 'position' => 10], // 2
-            ['type_id' => 3, 'title' => 'Literature', 'visible' => true, 'position' => 20], // 2
-            ['type_id' => 3, 'title' => 'Media', 'visible' => true, 'position' => 30], // 2
-            ['type_id' => 3, 'title' => 'Religion', 'visible' => true, 'position' => 50], // 2
-
-            ['type_id' => 4, 'title' => 'Sneakers', 'visible' => true, 'position' => 10], // 3
-            ['type_id' => 4, 'title' => 'Clothing', 'visible' => true, 'position' => 20], // 3
-
-            ['type_id' => 5, 'title' => 'Mama f*cked up the kitchen', 'visible' => true, 'position' => 10], // 4
-        ];
-
         foreach ($types as $key => $type) {
             $t = Type::create([
                 'title' => $type['title'],
@@ -48,23 +32,5 @@ class TypeSubtypeSeeder extends Seeder
                 'seoble_type' => 'App\Type',
             ]);
         }
-
-        foreach ($subtypes as $key => $subtype) {
-            $s = Subtype::create([
-                'title' => $subtype['title'],
-                'type_id' => $subtype['type_id'],
-                'icon_id' => null,
-                'visible' => $subtype['visible'],
-                'position' => $subtype['position'],
-            ]);
-
-            Seo::create([
-                'title' => $subtype['title'],
-                'slug' => $subtype['title'],
-                'seoble_id' => $s->id,
-                'seoble_type' => 'App\Subtype',
-            ]);
-        }
-
     }
 }

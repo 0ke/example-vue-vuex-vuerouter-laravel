@@ -24,13 +24,10 @@
                    <pre>{{ shortlocale | json }}</pre>
                </div>
 
-                <div class="col-lg-6">
-                    <div class="embed-responsive embed-responsive-16by9">
-                    </div>
+                <div class="col-lg-6 text-center">
+                    <img src="img/assets/logos/vuelogo.png" alt="">
                 </div>
             </div>
-
-
 
             <div class="row">
                 <div class="col-lg-6">
