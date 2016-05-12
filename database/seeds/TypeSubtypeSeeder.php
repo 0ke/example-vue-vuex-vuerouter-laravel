@@ -10,7 +10,7 @@ class TypeSubtypeSeeder extends Seeder
     {
 
         $types = [
-            ['icon_id' => null, 'title' => 'News', 'visible' => false, 'position' => 10], //1
+            ['icon_id' => null, 'title' => 'News', 'visible' => true, 'position' => 10], //1
             ['icon_id' => null, 'title' => 'Music', 'visible' => true, 'position' => 10], //1
             ['icon_id' => null, 'title' => 'Culture', 'visible' => true, 'position' => 20], //2
             ['icon_id' => null, 'title' => 'Fashion', 'visible' => true, 'position' => 30], //3
