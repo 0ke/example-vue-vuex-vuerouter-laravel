@@ -17,11 +17,8 @@ class TypeController extends Controller
     public function index($typeslug)
     {
         $type = $this->repo->findSeoble($typeslug, 'App\Type');
-        if ($type->subtypes->count()) {
-            $posts = $type->subposts()->with('type', 'subtype')->orderBy('created_at', 'desc')->whereConcept(0)->get(['posts.id', 'created_at', 'posts.type_id', 'posts.subtype_id']);
-        } else {
-            $posts = $type->posts()->with('type', 'subtype')->orderBy('created_at', 'desc')->whereConcept(0)->get(['posts.id', 'created_at', 'posts.type_id', 'posts.subtype_id']);
-        }
+
+        $posts = $type->posts()->with('type')->orderBy('created_at', 'desc')->whereConcept(0)->get(['posts.id', 'created_at', 'posts.type_id']);
 
         if (request()->ajax()) {
             return response()->json([

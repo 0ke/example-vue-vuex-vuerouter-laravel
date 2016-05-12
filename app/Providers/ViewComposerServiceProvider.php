@@ -10,11 +10,7 @@ class ViewComposerServiceProvider extends ServiceProvider
 
     public function boot()
     {
-        $this->composeShares();
-        $this->breakingnews();
         //$this->composeInbox();
-        $this->composeMenuLinks();
-        $this->composeDefaultPlaylist();
     }
 
     public function register()

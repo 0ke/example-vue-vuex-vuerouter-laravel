@@ -28,21 +28,12 @@ class Type extends Model
         return $this->hasMany(Post::class);
     }
 
-    public function subtypes()
-    {
-        return $this->hasMany(Subtype::class);
-    }
-
     public function icon()
     {
         return $this->belongsTo(Icon::class);
     }
 
     // has many trough
-    public function subposts()
-    {
-        return $this->hasManyThrough(Post::class, Subtype::class);
-    }
 
     // many types to many
 

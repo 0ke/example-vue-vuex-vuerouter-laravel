@@ -1,40 +1,25 @@
 <?php
 namespace App\Repositories;
 
-use App\Contactmessage;
 use App\Helpers\ImagePutter;
-use App\Icon;
-use App\Permission;
 use App\Post;
 use App\Role;
 use App\Seo;
-use App\Sharelink;
-use App\Subtype;
 use App\Type;
 use App\User;
 
 class Repository
 {
     public function __construct(
-        Contactmessage $cmessage,
-        Icon $icon,
         ImagePutter $imageputter,
-        Permission $permission,
         Post $post,
         Role $role,
         Seo $seo,
-        Sharelink $sharelink,
-        Subtype $subtype,
         Type $type,
         User $user) {
-        $this->contactmessage = $cmessage;
-        $this->icon = $icon;
-        $this->permission = $permission;
         $this->post = $post;
         $this->role = $role;
         $this->seo = $seo;
-        $this->sharelink = $sharelink;
-        $this->subtype = $subtype;
         $this->type = $type;
         $this->user = $user;
 

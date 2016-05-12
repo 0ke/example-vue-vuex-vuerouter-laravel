@@ -5,8 +5,8 @@ require('../modules/es6.object.to-string');
 require('../modules/es6.string.iterator');
 require('../modules/web.dom.iterable');
 require('../modules/es6.promise');
-module.exports = require('../modules/$.core').Promise;
-},{"../modules/$.core":8,"../modules/es6.object.to-string":52,"../modules/es6.promise":53,"../modules/es6.string.iterator":54,"../modules/web.dom.iterable":55}],3:[function(require,module,exports){
+module.exports = require('../modules/_core').Promise;
+},{"../modules/_core":10,"../modules/es6.object.to-string":65,"../modules/es6.promise":66,"../modules/es6.string.iterator":67,"../modules/web.dom.iterable":68}],3:[function(require,module,exports){
 module.exports = function(it){
   if(typeof it != 'function')throw TypeError(it + ' is not a function!');
   return it;
@@ -14,40 +14,75 @@ module.exports = function(it){
 },{}],4:[function(require,module,exports){
 module.exports = function(){ /* empty */ };
 },{}],5:[function(require,module,exports){
-var isObject = require('./$.is-object');
+module.exports = function(it, Constructor, name, forbiddenField){
+  if(!(it instanceof Constructor) || (forbiddenField !== undefined && forbiddenField in it)){
+    throw TypeError(name + ': incorrect invocation!');
+  } return it;
+};
+},{}],6:[function(require,module,exports){
+var isObject = require('./_is-object');
 module.exports = function(it){
   if(!isObject(it))throw TypeError(it + ' is not an object!');
   return it;
 };
-},{"./$.is-object":23}],6:[function(require,module,exports){
+},{"./_is-object":27}],7:[function(require,module,exports){
+// false -> Array#indexOf
+// true  -> Array#includes
+var toIObject = require('./_to-iobject')
+  , toLength  = require('./_to-length')
+  , toIndex   = require('./_to-index');
+module.exports = function(IS_INCLUDES){
+  return function($this, el, fromIndex){
+    var O      = toIObject($this)
+      , length = toLength(O.length)
+      , index  = toIndex(fromIndex, length)
+      , value;
+    // Array#includes uses SameValueZero equality algorithm
+    if(IS_INCLUDES && el != el)while(length > index){
+      value = O[index++];
+      if(value != value)return true;
+    // Array#toIndex ignores holes, Array#includes - not
+    } else for(;length > index; index++)if(IS_INCLUDES || index in O){
+      if(O[index] === el)return IS_INCLUDES || index || 0;
+    } return !IS_INCLUDES && -1;
+  };
+};
+},{"./_to-index":55,"./_to-iobject":57,"./_to-length":58}],8:[function(require,module,exports){
 // getting tag from 19.1.3.6 Object.prototype.toString()
-var cof = require('./$.cof')
-  , TAG = require('./$.wks')('toStringTag')
+var cof = require('./_cof')
+  , TAG = require('./_wks')('toStringTag')
   // ES3 wrong here
   , ARG = cof(function(){ return arguments; }()) == 'Arguments';
+
+// fallback for IE11 Script Access Denied error
+var tryGet = function(it, key){
+  try {
+    return it[key];
+  } catch(e){ /* empty */ }
+};
 
 module.exports = function(it){
   var O, T, B;
   return it === undefined ? 'Undefined' : it === null ? 'Null'
     // @@toStringTag case
-    : typeof (T = (O = Object(it))[TAG]) == 'string' ? T
+    : typeof (T = tryGet(O = Object(it), TAG)) == 'string' ? T
     // builtinTag case
     : ARG ? cof(O)
     // ES3 arguments fallback
     : (B = cof(O)) == 'Object' && typeof O.callee == 'function' ? 'Arguments' : B;
 };
-},{"./$.cof":7,"./$.wks":49}],7:[function(require,module,exports){
+},{"./_cof":9,"./_wks":62}],9:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = function(it){
   return toString.call(it).slice(8, -1);
 };
-},{}],8:[function(require,module,exports){
-var core = module.exports = {version: '1.2.6'};
+},{}],10:[function(require,module,exports){
+var core = module.exports = {version: '2.4.0'};
 if(typeof __e == 'number')__e = core; // eslint-disable-line no-undef
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // optional / simple context binding
-var aFunction = require('./$.a-function');
+var aFunction = require('./_a-function');
 module.exports = function(fn, that, length){
   aFunction(fn);
   if(that === undefined)return fn;
@@ -66,29 +101,35 @@ module.exports = function(fn, that, length){
     return fn.apply(that, arguments);
   };
 };
-},{"./$.a-function":3}],10:[function(require,module,exports){
+},{"./_a-function":3}],12:[function(require,module,exports){
 // 7.2.1 RequireObjectCoercible(argument)
 module.exports = function(it){
   if(it == undefined)throw TypeError("Can't call method on  " + it);
   return it;
 };
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 // Thank's IE8 for his funny defineProperty
-module.exports = !require('./$.fails')(function(){
+module.exports = !require('./_fails')(function(){
   return Object.defineProperty({}, 'a', {get: function(){ return 7; }}).a != 7;
 });
-},{"./$.fails":14}],12:[function(require,module,exports){
-var isObject = require('./$.is-object')
-  , document = require('./$.global').document
+},{"./_fails":17}],14:[function(require,module,exports){
+var isObject = require('./_is-object')
+  , document = require('./_global').document
   // in old IE typeof document.createElement is 'object'
   , is = isObject(document) && isObject(document.createElement);
 module.exports = function(it){
   return is ? document.createElement(it) : {};
 };
-},{"./$.global":16,"./$.is-object":23}],13:[function(require,module,exports){
-var global    = require('./$.global')
-  , core      = require('./$.core')
-  , ctx       = require('./$.ctx')
+},{"./_global":19,"./_is-object":27}],15:[function(require,module,exports){
+// IE 8- don't enum bug keys
+module.exports = (
+  'constructor,hasOwnProperty,isPrototypeOf,propertyIsEnumerable,toLocaleString,toString,valueOf'
+).split(',');
+},{}],16:[function(require,module,exports){
+var global    = require('./_global')
+  , core      = require('./_core')
+  , ctx       = require('./_ctx')
+  , hide      = require('./_hide')
   , PROTOTYPE = 'prototype';
 
 var $export = function(type, name, source){
@@ -99,12 +140,13 @@ var $export = function(type, name, source){
     , IS_BIND   = type & $export.B
     , IS_WRAP   = type & $export.W
     , exports   = IS_GLOBAL ? core : core[name] || (core[name] = {})
+    , expProto  = exports[PROTOTYPE]
     , target    = IS_GLOBAL ? global : IS_STATIC ? global[name] : (global[name] || {})[PROTOTYPE]
     , key, own, out;
   if(IS_GLOBAL)source = name;
   for(key in source){
     // contains in native
-    own = !IS_FORCED && target && key in target;
+    own = !IS_FORCED && target && target[key] !== undefined;
     if(own && key in exports)continue;
     // export native or passed
     out = own ? target[key] : source[key];
@@ -114,25 +156,38 @@ var $export = function(type, name, source){
     : IS_BIND && own ? ctx(out, global)
     // wrap global constructors for prevent change them in library
     : IS_WRAP && target[key] == out ? (function(C){
-      var F = function(param){
-        return this instanceof C ? new C(param) : C(param);
+      var F = function(a, b, c){
+        if(this instanceof C){
+          switch(arguments.length){
+            case 0: return new C;
+            case 1: return new C(a);
+            case 2: return new C(a, b);
+          } return new C(a, b, c);
+        } return C.apply(this, arguments);
       };
       F[PROTOTYPE] = C[PROTOTYPE];
       return F;
     // make static versions for prototype methods
     })(out) : IS_PROTO && typeof out == 'function' ? ctx(Function.call, out) : out;
-    if(IS_PROTO)(exports[PROTOTYPE] || (exports[PROTOTYPE] = {}))[key] = out;
+    // export proto methods to core.%CONSTRUCTOR%.methods.%NAME%
+    if(IS_PROTO){
+      (exports.virtual || (exports.virtual = {}))[key] = out;
+      // export proto methods to core.%CONSTRUCTOR%.prototype.%NAME%
+      if(type & $export.R && expProto && !expProto[key])hide(expProto, key, out);
+    }
   }
 };
 // type bitmap
-$export.F = 1;  // forced
-$export.G = 2;  // global
-$export.S = 4;  // static
-$export.P = 8;  // proto
-$export.B = 16; // bind
-$export.W = 32; // wrap
+$export.F = 1;   // forced
+$export.G = 2;   // global
+$export.S = 4;   // static
+$export.P = 8;   // proto
+$export.B = 16;  // bind
+$export.W = 32;  // wrap
+$export.U = 64;  // safe
+$export.R = 128; // real proto method for `library` 
 module.exports = $export;
-},{"./$.core":8,"./$.ctx":9,"./$.global":16}],14:[function(require,module,exports){
+},{"./_core":10,"./_ctx":11,"./_global":19,"./_hide":21}],17:[function(require,module,exports){
 module.exports = function(exec){
   try {
     return !!exec();
@@ -140,48 +195,58 @@ module.exports = function(exec){
     return true;
   }
 };
-},{}],15:[function(require,module,exports){
-var ctx         = require('./$.ctx')
-  , call        = require('./$.iter-call')
-  , isArrayIter = require('./$.is-array-iter')
-  , anObject    = require('./$.an-object')
-  , toLength    = require('./$.to-length')
-  , getIterFn   = require('./core.get-iterator-method');
-module.exports = function(iterable, entries, fn, that){
-  var iterFn = getIterFn(iterable)
+},{}],18:[function(require,module,exports){
+var ctx         = require('./_ctx')
+  , call        = require('./_iter-call')
+  , isArrayIter = require('./_is-array-iter')
+  , anObject    = require('./_an-object')
+  , toLength    = require('./_to-length')
+  , getIterFn   = require('./core.get-iterator-method')
+  , BREAK       = {}
+  , RETURN      = {};
+var exports = module.exports = function(iterable, entries, fn, that, ITERATOR){
+  var iterFn = ITERATOR ? function(){ return iterable; } : getIterFn(iterable)
     , f      = ctx(fn, that, entries ? 2 : 1)
     , index  = 0
-    , length, step, iterator;
+    , length, step, iterator, result;
   if(typeof iterFn != 'function')throw TypeError(iterable + ' is not iterable!');
   // fast case for arrays with default iterator
   if(isArrayIter(iterFn))for(length = toLength(iterable.length); length > index; index++){
-    entries ? f(anObject(step = iterable[index])[0], step[1]) : f(iterable[index]);
+    result = entries ? f(anObject(step = iterable[index])[0], step[1]) : f(iterable[index]);
+    if(result === BREAK || result === RETURN)return result;
   } else for(iterator = iterFn.call(iterable); !(step = iterator.next()).done; ){
-    call(iterator, f, step.value, entries);
+    result = call(iterator, f, step.value, entries);
+    if(result === BREAK || result === RETURN)return result;
   }
 };
-},{"./$.an-object":5,"./$.ctx":9,"./$.is-array-iter":22,"./$.iter-call":24,"./$.to-length":47,"./core.get-iterator-method":50}],16:[function(require,module,exports){
+exports.BREAK  = BREAK;
+exports.RETURN = RETURN;
+},{"./_an-object":6,"./_ctx":11,"./_is-array-iter":26,"./_iter-call":28,"./_to-length":58,"./core.get-iterator-method":63}],19:[function(require,module,exports){
 // https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 var global = module.exports = typeof window != 'undefined' && window.Math == Math
   ? window : typeof self != 'undefined' && self.Math == Math ? self : Function('return this')();
 if(typeof __g == 'number')__g = global; // eslint-disable-line no-undef
-},{}],17:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 var hasOwnProperty = {}.hasOwnProperty;
 module.exports = function(it, key){
   return hasOwnProperty.call(it, key);
 };
-},{}],18:[function(require,module,exports){
-var $          = require('./$')
-  , createDesc = require('./$.property-desc');
-module.exports = require('./$.descriptors') ? function(object, key, value){
-  return $.setDesc(object, key, createDesc(1, value));
+},{}],21:[function(require,module,exports){
+var dP         = require('./_object-dp')
+  , createDesc = require('./_property-desc');
+module.exports = require('./_descriptors') ? function(object, key, value){
+  return dP.f(object, key, createDesc(1, value));
 } : function(object, key, value){
   object[key] = value;
   return object;
 };
-},{"./$":30,"./$.descriptors":11,"./$.property-desc":33}],19:[function(require,module,exports){
-module.exports = require('./$.global').document && document.documentElement;
-},{"./$.global":16}],20:[function(require,module,exports){
+},{"./_descriptors":13,"./_object-dp":37,"./_property-desc":44}],22:[function(require,module,exports){
+module.exports = require('./_global').document && document.documentElement;
+},{"./_global":19}],23:[function(require,module,exports){
+module.exports = !require('./_descriptors') && !require('./_fails')(function(){
+  return Object.defineProperty(require('./_dom-create')('div'), 'a', {get: function(){ return 7; }}).a != 7;
+});
+},{"./_descriptors":13,"./_dom-create":14,"./_fails":17}],24:[function(require,module,exports){
 // fast apply, http://jsperf.lnkit.com/fast-apply/5
 module.exports = function(fn, args, that){
   var un = that === undefined;
@@ -198,28 +263,28 @@ module.exports = function(fn, args, that){
                       : fn.call(that, args[0], args[1], args[2], args[3]);
   } return              fn.apply(that, args);
 };
-},{}],21:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 // fallback for non-array-like ES3 and non-enumerable old V8 strings
-var cof = require('./$.cof');
+var cof = require('./_cof');
 module.exports = Object('z').propertyIsEnumerable(0) ? Object : function(it){
   return cof(it) == 'String' ? it.split('') : Object(it);
 };
-},{"./$.cof":7}],22:[function(require,module,exports){
+},{"./_cof":9}],26:[function(require,module,exports){
 // check on default Array iterator
-var Iterators  = require('./$.iterators')
-  , ITERATOR   = require('./$.wks')('iterator')
+var Iterators  = require('./_iterators')
+  , ITERATOR   = require('./_wks')('iterator')
   , ArrayProto = Array.prototype;
 
 module.exports = function(it){
   return it !== undefined && (Iterators.Array === it || ArrayProto[ITERATOR] === it);
 };
-},{"./$.iterators":29,"./$.wks":49}],23:[function(require,module,exports){
+},{"./_iterators":33,"./_wks":62}],27:[function(require,module,exports){
 module.exports = function(it){
   return typeof it === 'object' ? it !== null : typeof it === 'function';
 };
-},{}],24:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 // call something on iterator step with safe closing on error
-var anObject = require('./$.an-object');
+var anObject = require('./_an-object');
 module.exports = function(iterator, fn, value, entries){
   try {
     return entries ? fn(anObject(value)[0], value[1]) : fn(value);
@@ -230,32 +295,32 @@ module.exports = function(iterator, fn, value, entries){
     throw e;
   }
 };
-},{"./$.an-object":5}],25:[function(require,module,exports){
+},{"./_an-object":6}],29:[function(require,module,exports){
 'use strict';
-var $              = require('./$')
-  , descriptor     = require('./$.property-desc')
-  , setToStringTag = require('./$.set-to-string-tag')
+var create         = require('./_object-create')
+  , descriptor     = require('./_property-desc')
+  , setToStringTag = require('./_set-to-string-tag')
   , IteratorPrototype = {};
 
 // 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
-require('./$.hide')(IteratorPrototype, require('./$.wks')('iterator'), function(){ return this; });
+require('./_hide')(IteratorPrototype, require('./_wks')('iterator'), function(){ return this; });
 
 module.exports = function(Constructor, NAME, next){
-  Constructor.prototype = $.create(IteratorPrototype, {next: descriptor(1, next)});
+  Constructor.prototype = create(IteratorPrototype, {next: descriptor(1, next)});
   setToStringTag(Constructor, NAME + ' Iterator');
 };
-},{"./$":30,"./$.hide":18,"./$.property-desc":33,"./$.set-to-string-tag":39,"./$.wks":49}],26:[function(require,module,exports){
+},{"./_hide":21,"./_object-create":36,"./_property-desc":44,"./_set-to-string-tag":49,"./_wks":62}],30:[function(require,module,exports){
 'use strict';
-var LIBRARY        = require('./$.library')
-  , $export        = require('./$.export')
-  , redefine       = require('./$.redefine')
-  , hide           = require('./$.hide')
-  , has            = require('./$.has')
-  , Iterators      = require('./$.iterators')
-  , $iterCreate    = require('./$.iter-create')
-  , setToStringTag = require('./$.set-to-string-tag')
-  , getProto       = require('./$').getProto
-  , ITERATOR       = require('./$.wks')('iterator')
+var LIBRARY        = require('./_library')
+  , $export        = require('./_export')
+  , redefine       = require('./_redefine')
+  , hide           = require('./_hide')
+  , has            = require('./_has')
+  , Iterators      = require('./_iterators')
+  , $iterCreate    = require('./_iter-create')
+  , setToStringTag = require('./_set-to-string-tag')
+  , getPrototypeOf = require('./_object-gpo')
+  , ITERATOR       = require('./_wks')('iterator')
   , BUGGY          = !([].keys && 'next' in [].keys()) // Safari has buggy iterators w/o `next`
   , FF_ITERATOR    = '@@iterator'
   , KEYS           = 'keys'
@@ -278,19 +343,23 @@ module.exports = function(Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCED
     , proto      = Base.prototype
     , $native    = proto[ITERATOR] || proto[FF_ITERATOR] || DEFAULT && proto[DEFAULT]
     , $default   = $native || getMethod(DEFAULT)
-    , methods, key;
+    , $entries   = DEFAULT ? !DEF_VALUES ? $default : getMethod('entries') : undefined
+    , $anyNative = NAME == 'Array' ? proto.entries || $native : $native
+    , methods, key, IteratorPrototype;
   // Fix native
-  if($native){
-    var IteratorPrototype = getProto($default.call(new Base));
-    // Set @@toStringTag to native iterators
-    setToStringTag(IteratorPrototype, TAG, true);
-    // FF fix
-    if(!LIBRARY && has(proto, FF_ITERATOR))hide(IteratorPrototype, ITERATOR, returnThis);
-    // fix Array#{values, @@iterator}.name in V8 / FF
-    if(DEF_VALUES && $native.name !== VALUES){
-      VALUES_BUG = true;
-      $default = function values(){ return $native.call(this); };
+  if($anyNative){
+    IteratorPrototype = getPrototypeOf($anyNative.call(new Base));
+    if(IteratorPrototype !== Object.prototype){
+      // Set @@toStringTag to native iterators
+      setToStringTag(IteratorPrototype, TAG, true);
+      // fix for some old engines
+      if(!LIBRARY && !has(IteratorPrototype, ITERATOR))hide(IteratorPrototype, ITERATOR, returnThis);
     }
+  }
+  // fix Array#{values, @@iterator}.name in V8 / FF
+  if(DEF_VALUES && $native && $native.name !== VALUES){
+    VALUES_BUG = true;
+    $default = function values(){ return $native.call(this); };
   }
   // Define iterator
   if((!LIBRARY || FORCED) && (BUGGY || VALUES_BUG || !proto[ITERATOR])){
@@ -301,9 +370,9 @@ module.exports = function(Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCED
   Iterators[TAG]  = returnThis;
   if(DEFAULT){
     methods = {
-      values:  DEF_VALUES  ? $default : getMethod(VALUES),
-      keys:    IS_SET      ? $default : getMethod(KEYS),
-      entries: !DEF_VALUES ? $default : getMethod('entries')
+      values:  DEF_VALUES ? $default : getMethod(VALUES),
+      keys:    IS_SET     ? $default : getMethod(KEYS),
+      entries: $entries
     };
     if(FORCED)for(key in methods){
       if(!(key in proto))redefine(proto, key, methods[key]);
@@ -311,8 +380,8 @@ module.exports = function(Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCED
   }
   return methods;
 };
-},{"./$":30,"./$.export":13,"./$.has":17,"./$.hide":18,"./$.iter-create":25,"./$.iterators":29,"./$.library":31,"./$.redefine":35,"./$.set-to-string-tag":39,"./$.wks":49}],27:[function(require,module,exports){
-var ITERATOR     = require('./$.wks')('iterator')
+},{"./_export":16,"./_has":20,"./_hide":21,"./_iter-create":29,"./_iterators":33,"./_library":34,"./_object-gpo":40,"./_redefine":46,"./_set-to-string-tag":49,"./_wks":62}],31:[function(require,module,exports){
+var ITERATOR     = require('./_wks')('iterator')
   , SAFE_CLOSING = false;
 
 try {
@@ -327,100 +396,221 @@ module.exports = function(exec, skipClosing){
   try {
     var arr  = [7]
       , iter = arr[ITERATOR]();
-    iter.next = function(){ safe = true; };
+    iter.next = function(){ return {done: safe = true}; };
     arr[ITERATOR] = function(){ return iter; };
     exec(arr);
   } catch(e){ /* empty */ }
   return safe;
 };
-},{"./$.wks":49}],28:[function(require,module,exports){
+},{"./_wks":62}],32:[function(require,module,exports){
 module.exports = function(done, value){
   return {value: value, done: !!done};
 };
-},{}],29:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 module.exports = {};
-},{}],30:[function(require,module,exports){
-var $Object = Object;
-module.exports = {
-  create:     $Object.create,
-  getProto:   $Object.getPrototypeOf,
-  isEnum:     {}.propertyIsEnumerable,
-  getDesc:    $Object.getOwnPropertyDescriptor,
-  setDesc:    $Object.defineProperty,
-  setDescs:   $Object.defineProperties,
-  getKeys:    $Object.keys,
-  getNames:   $Object.getOwnPropertyNames,
-  getSymbols: $Object.getOwnPropertySymbols,
-  each:       [].forEach
-};
-},{}],31:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 module.exports = true;
-},{}],32:[function(require,module,exports){
-var global    = require('./$.global')
-  , macrotask = require('./$.task').set
+},{}],35:[function(require,module,exports){
+var global    = require('./_global')
+  , macrotask = require('./_task').set
   , Observer  = global.MutationObserver || global.WebKitMutationObserver
   , process   = global.process
   , Promise   = global.Promise
-  , isNode    = require('./$.cof')(process) == 'process'
-  , head, last, notify;
+  , isNode    = require('./_cof')(process) == 'process';
 
-var flush = function(){
-  var parent, domain, fn;
-  if(isNode && (parent = process.domain)){
-    process.domain = null;
-    parent.exit();
+module.exports = function(){
+  var head, last, notify;
+
+  var flush = function(){
+    var parent, fn;
+    if(isNode && (parent = process.domain))parent.exit();
+    while(head){
+      fn   = head.fn;
+      head = head.next;
+      try {
+        fn();
+      } catch(e){
+        if(head)notify();
+        else last = undefined;
+        throw e;
+      }
+    } last = undefined;
+    if(parent)parent.enter();
+  };
+
+  // Node.js
+  if(isNode){
+    notify = function(){
+      process.nextTick(flush);
+    };
+  // browsers with MutationObserver
+  } else if(Observer){
+    var toggle = true
+      , node   = document.createTextNode('');
+    new Observer(flush).observe(node, {characterData: true}); // eslint-disable-line no-new
+    notify = function(){
+      node.data = toggle = !toggle;
+    };
+  // environments with maybe non-completely correct, but existent Promise
+  } else if(Promise && Promise.resolve){
+    var promise = Promise.resolve();
+    notify = function(){
+      promise.then(flush);
+    };
+  // for other environments - macrotask based on:
+  // - setImmediate
+  // - MessageChannel
+  // - window.postMessag
+  // - onreadystatechange
+  // - setTimeout
+  } else {
+    notify = function(){
+      // strange IE + webpack dev server bug - use .call(global)
+      macrotask.call(global, flush);
+    };
   }
-  while(head){
-    domain = head.domain;
-    fn     = head.fn;
-    if(domain)domain.enter();
-    fn(); // <- currently we use it only for Promise - try / catch not required
-    if(domain)domain.exit();
-    head = head.next;
-  } last = undefined;
-  if(parent)parent.enter();
+
+  return function(fn){
+    var task = {fn: fn, next: undefined};
+    if(last)last.next = task;
+    if(!head){
+      head = task;
+      notify();
+    } last = task;
+  };
+};
+},{"./_cof":9,"./_global":19,"./_task":54}],36:[function(require,module,exports){
+// 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
+var anObject    = require('./_an-object')
+  , dPs         = require('./_object-dps')
+  , enumBugKeys = require('./_enum-bug-keys')
+  , IE_PROTO    = require('./_shared-key')('IE_PROTO')
+  , Empty       = function(){ /* empty */ }
+  , PROTOTYPE   = 'prototype';
+
+// Create object with fake `null` prototype: use iframe Object with cleared prototype
+var createDict = function(){
+  // Thrash, waste and sodomy: IE GC bug
+  var iframe = require('./_dom-create')('iframe')
+    , i      = enumBugKeys.length
+    , gt     = '>'
+    , iframeDocument;
+  iframe.style.display = 'none';
+  require('./_html').appendChild(iframe);
+  iframe.src = 'javascript:'; // eslint-disable-line no-script-url
+  // createDict = iframe.contentWindow.Object;
+  // html.removeChild(iframe);
+  iframeDocument = iframe.contentWindow.document;
+  iframeDocument.open();
+  iframeDocument.write('<script>document.F=Object</script' + gt);
+  iframeDocument.close();
+  createDict = iframeDocument.F;
+  while(i--)delete createDict[PROTOTYPE][enumBugKeys[i]];
+  return createDict();
 };
 
-// Node.js
-if(isNode){
-  notify = function(){
-    process.nextTick(flush);
-  };
-// browsers with MutationObserver
-} else if(Observer){
-  var toggle = 1
-    , node   = document.createTextNode('');
-  new Observer(flush).observe(node, {characterData: true}); // eslint-disable-line no-new
-  notify = function(){
-    node.data = toggle = -toggle;
-  };
-// environments with maybe non-completely correct, but existent Promise
-} else if(Promise && Promise.resolve){
-  notify = function(){
-    Promise.resolve().then(flush);
-  };
-// for other environments - macrotask based on:
-// - setImmediate
-// - MessageChannel
-// - window.postMessag
-// - onreadystatechange
-// - setTimeout
-} else {
-  notify = function(){
-    // strange IE + webpack dev server bug - use .call(global)
-    macrotask.call(global, flush);
-  };
-}
-
-module.exports = function asap(fn){
-  var task = {fn: fn, next: undefined, domain: isNode && process.domain};
-  if(last)last.next = task;
-  if(!head){
-    head = task;
-    notify();
-  } last = task;
+module.exports = Object.create || function create(O, Properties){
+  var result;
+  if(O !== null){
+    Empty[PROTOTYPE] = anObject(O);
+    result = new Empty;
+    Empty[PROTOTYPE] = null;
+    // add "__proto__" for Object.getPrototypeOf polyfill
+    result[IE_PROTO] = O;
+  } else result = createDict();
+  return Properties === undefined ? result : dPs(result, Properties);
 };
-},{"./$.cof":7,"./$.global":16,"./$.task":44}],33:[function(require,module,exports){
+},{"./_an-object":6,"./_dom-create":14,"./_enum-bug-keys":15,"./_html":22,"./_object-dps":38,"./_shared-key":50}],37:[function(require,module,exports){
+var anObject       = require('./_an-object')
+  , IE8_DOM_DEFINE = require('./_ie8-dom-define')
+  , toPrimitive    = require('./_to-primitive')
+  , dP             = Object.defineProperty;
+
+exports.f = require('./_descriptors') ? Object.defineProperty : function defineProperty(O, P, Attributes){
+  anObject(O);
+  P = toPrimitive(P, true);
+  anObject(Attributes);
+  if(IE8_DOM_DEFINE)try {
+    return dP(O, P, Attributes);
+  } catch(e){ /* empty */ }
+  if('get' in Attributes || 'set' in Attributes)throw TypeError('Accessors not supported!');
+  if('value' in Attributes)O[P] = Attributes.value;
+  return O;
+};
+},{"./_an-object":6,"./_descriptors":13,"./_ie8-dom-define":23,"./_to-primitive":60}],38:[function(require,module,exports){
+var dP       = require('./_object-dp')
+  , anObject = require('./_an-object')
+  , getKeys  = require('./_object-keys');
+
+module.exports = require('./_descriptors') ? Object.defineProperties : function defineProperties(O, Properties){
+  anObject(O);
+  var keys   = getKeys(Properties)
+    , length = keys.length
+    , i = 0
+    , P;
+  while(length > i)dP.f(O, P = keys[i++], Properties[P]);
+  return O;
+};
+},{"./_an-object":6,"./_descriptors":13,"./_object-dp":37,"./_object-keys":42}],39:[function(require,module,exports){
+var pIE            = require('./_object-pie')
+  , createDesc     = require('./_property-desc')
+  , toIObject      = require('./_to-iobject')
+  , toPrimitive    = require('./_to-primitive')
+  , has            = require('./_has')
+  , IE8_DOM_DEFINE = require('./_ie8-dom-define')
+  , gOPD           = Object.getOwnPropertyDescriptor;
+
+exports.f = require('./_descriptors') ? gOPD : function getOwnPropertyDescriptor(O, P){
+  O = toIObject(O);
+  P = toPrimitive(P, true);
+  if(IE8_DOM_DEFINE)try {
+    return gOPD(O, P);
+  } catch(e){ /* empty */ }
+  if(has(O, P))return createDesc(!pIE.f.call(O, P), O[P]);
+};
+},{"./_descriptors":13,"./_has":20,"./_ie8-dom-define":23,"./_object-pie":43,"./_property-desc":44,"./_to-iobject":57,"./_to-primitive":60}],40:[function(require,module,exports){
+// 19.1.2.9 / 15.2.3.2 Object.getPrototypeOf(O)
+var has         = require('./_has')
+  , toObject    = require('./_to-object')
+  , IE_PROTO    = require('./_shared-key')('IE_PROTO')
+  , ObjectProto = Object.prototype;
+
+module.exports = Object.getPrototypeOf || function(O){
+  O = toObject(O);
+  if(has(O, IE_PROTO))return O[IE_PROTO];
+  if(typeof O.constructor == 'function' && O instanceof O.constructor){
+    return O.constructor.prototype;
+  } return O instanceof Object ? ObjectProto : null;
+};
+},{"./_has":20,"./_shared-key":50,"./_to-object":59}],41:[function(require,module,exports){
+var has          = require('./_has')
+  , toIObject    = require('./_to-iobject')
+  , arrayIndexOf = require('./_array-includes')(false)
+  , IE_PROTO     = require('./_shared-key')('IE_PROTO');
+
+module.exports = function(object, names){
+  var O      = toIObject(object)
+    , i      = 0
+    , result = []
+    , key;
+  for(key in O)if(key != IE_PROTO)has(O, key) && result.push(key);
+  // Don't enum bug & hidden keys
+  while(names.length > i)if(has(O, key = names[i++])){
+    ~arrayIndexOf(result, key) || result.push(key);
+  }
+  return result;
+};
+},{"./_array-includes":7,"./_has":20,"./_shared-key":50,"./_to-iobject":57}],42:[function(require,module,exports){
+// 19.1.2.14 / 15.2.3.14 Object.keys(O)
+var $keys       = require('./_object-keys-internal')
+  , enumBugKeys = require('./_enum-bug-keys');
+
+module.exports = Object.keys || function keys(O){
+  return $keys(O, enumBugKeys);
+};
+},{"./_enum-bug-keys":15,"./_object-keys-internal":41}],43:[function(require,module,exports){
+exports.f = {}.propertyIsEnumerable;
+},{}],44:[function(require,module,exports){
 module.exports = function(bitmap, value){
   return {
     enumerable  : !(bitmap & 1),
@@ -429,25 +619,21 @@ module.exports = function(bitmap, value){
     value       : value
   };
 };
-},{}],34:[function(require,module,exports){
-var redefine = require('./$.redefine');
-module.exports = function(target, src){
-  for(var key in src)redefine(target, key, src[key]);
-  return target;
+},{}],45:[function(require,module,exports){
+var hide = require('./_hide');
+module.exports = function(target, src, safe){
+  for(var key in src){
+    if(safe && target[key])target[key] = src[key];
+    else hide(target, key, src[key]);
+  } return target;
 };
-},{"./$.redefine":35}],35:[function(require,module,exports){
-module.exports = require('./$.hide');
-},{"./$.hide":18}],36:[function(require,module,exports){
-// 7.2.9 SameValue(x, y)
-module.exports = Object.is || function is(x, y){
-  return x === y ? x !== 0 || 1 / x === 1 / y : x != x && y != y;
-};
-},{}],37:[function(require,module,exports){
+},{"./_hide":21}],46:[function(require,module,exports){
+module.exports = require('./_hide');
+},{"./_hide":21}],47:[function(require,module,exports){
 // Works with __proto__ only. Old v8 can't work with null proto objects.
 /* eslint-disable no-proto */
-var getDesc  = require('./$').getDesc
-  , isObject = require('./$.is-object')
-  , anObject = require('./$.an-object');
+var isObject = require('./_is-object')
+  , anObject = require('./_an-object');
 var check = function(O, proto){
   anObject(O);
   if(!isObject(proto) && proto !== null)throw TypeError(proto + ": can't set as prototype!");
@@ -456,7 +642,7 @@ module.exports = {
   set: Object.setPrototypeOf || ('__proto__' in {} ? // eslint-disable-line
     function(test, buggy, set){
       try {
-        set = require('./$.ctx')(Function.call, getDesc(Object.prototype, '__proto__').set, 2);
+        set = require('./_ctx')(Function.call, require('./_object-gopd').f(Object.prototype, '__proto__').set, 2);
         set(test, []);
         buggy = !(test instanceof Array);
       } catch(e){ buggy = true; }
@@ -469,52 +655,54 @@ module.exports = {
     }({}, false) : undefined),
   check: check
 };
-},{"./$":30,"./$.an-object":5,"./$.ctx":9,"./$.is-object":23}],38:[function(require,module,exports){
+},{"./_an-object":6,"./_ctx":11,"./_is-object":27,"./_object-gopd":39}],48:[function(require,module,exports){
 'use strict';
-var core        = require('./$.core')
-  , $           = require('./$')
-  , DESCRIPTORS = require('./$.descriptors')
-  , SPECIES     = require('./$.wks')('species');
+var global      = require('./_global')
+  , core        = require('./_core')
+  , dP          = require('./_object-dp')
+  , DESCRIPTORS = require('./_descriptors')
+  , SPECIES     = require('./_wks')('species');
 
 module.exports = function(KEY){
-  var C = core[KEY];
-  if(DESCRIPTORS && C && !C[SPECIES])$.setDesc(C, SPECIES, {
+  var C = typeof core[KEY] == 'function' ? core[KEY] : global[KEY];
+  if(DESCRIPTORS && C && !C[SPECIES])dP.f(C, SPECIES, {
     configurable: true,
     get: function(){ return this; }
   });
 };
-},{"./$":30,"./$.core":8,"./$.descriptors":11,"./$.wks":49}],39:[function(require,module,exports){
-var def = require('./$').setDesc
-  , has = require('./$.has')
-  , TAG = require('./$.wks')('toStringTag');
+},{"./_core":10,"./_descriptors":13,"./_global":19,"./_object-dp":37,"./_wks":62}],49:[function(require,module,exports){
+var def = require('./_object-dp').f
+  , has = require('./_has')
+  , TAG = require('./_wks')('toStringTag');
 
 module.exports = function(it, tag, stat){
   if(it && !has(it = stat ? it : it.prototype, TAG))def(it, TAG, {configurable: true, value: tag});
 };
-},{"./$":30,"./$.has":17,"./$.wks":49}],40:[function(require,module,exports){
-var global = require('./$.global')
+},{"./_has":20,"./_object-dp":37,"./_wks":62}],50:[function(require,module,exports){
+var shared = require('./_shared')('keys')
+  , uid    = require('./_uid');
+module.exports = function(key){
+  return shared[key] || (shared[key] = uid(key));
+};
+},{"./_shared":51,"./_uid":61}],51:[function(require,module,exports){
+var global = require('./_global')
   , SHARED = '__core-js_shared__'
   , store  = global[SHARED] || (global[SHARED] = {});
 module.exports = function(key){
   return store[key] || (store[key] = {});
 };
-},{"./$.global":16}],41:[function(require,module,exports){
+},{"./_global":19}],52:[function(require,module,exports){
 // 7.3.20 SpeciesConstructor(O, defaultConstructor)
-var anObject  = require('./$.an-object')
-  , aFunction = require('./$.a-function')
-  , SPECIES   = require('./$.wks')('species');
+var anObject  = require('./_an-object')
+  , aFunction = require('./_a-function')
+  , SPECIES   = require('./_wks')('species');
 module.exports = function(O, D){
   var C = anObject(O).constructor, S;
   return C === undefined || (S = anObject(C)[SPECIES]) == undefined ? D : aFunction(S);
 };
-},{"./$.a-function":3,"./$.an-object":5,"./$.wks":49}],42:[function(require,module,exports){
-module.exports = function(it, Constructor, name){
-  if(!(it instanceof Constructor))throw TypeError(name + ": use the 'new' operator!");
-  return it;
-};
-},{}],43:[function(require,module,exports){
-var toInteger = require('./$.to-integer')
-  , defined   = require('./$.defined');
+},{"./_a-function":3,"./_an-object":6,"./_wks":62}],53:[function(require,module,exports){
+var toInteger = require('./_to-integer')
+  , defined   = require('./_defined');
 // true  -> String#at
 // false -> String#codePointAt
 module.exports = function(TO_STRING){
@@ -530,12 +718,12 @@ module.exports = function(TO_STRING){
       : TO_STRING ? s.slice(i, i + 2) : (a - 0xd800 << 10) + (b - 0xdc00) + 0x10000;
   };
 };
-},{"./$.defined":10,"./$.to-integer":45}],44:[function(require,module,exports){
-var ctx                = require('./$.ctx')
-  , invoke             = require('./$.invoke')
-  , html               = require('./$.html')
-  , cel                = require('./$.dom-create')
-  , global             = require('./$.global')
+},{"./_defined":12,"./_to-integer":56}],54:[function(require,module,exports){
+var ctx                = require('./_ctx')
+  , invoke             = require('./_invoke')
+  , html               = require('./_html')
+  , cel                = require('./_dom-create')
+  , global             = require('./_global')
   , process            = global.process
   , setTask            = global.setImmediate
   , clearTask          = global.clearImmediate
@@ -552,7 +740,7 @@ var run = function(){
     fn();
   }
 };
-var listner = function(event){
+var listener = function(event){
   run.call(event.data);
 };
 // Node.js 0.9+ & IE10+ has setImmediate, otherwise:
@@ -570,7 +758,7 @@ if(!setTask || !clearTask){
     delete queue[id];
   };
   // Node.js 0.8-
-  if(require('./$.cof')(process) == 'process'){
+  if(require('./_cof')(process) == 'process'){
     defer = function(id){
       process.nextTick(ctx(run, id, 1));
     };
@@ -578,7 +766,7 @@ if(!setTask || !clearTask){
   } else if(MessageChannel){
     channel = new MessageChannel;
     port    = channel.port2;
-    channel.port1.onmessage = listner;
+    channel.port1.onmessage = listener;
     defer = ctx(port.postMessage, port, 1);
   // Browsers with postMessage, skip WebWorkers
   // IE8 has postMessage, but it's sync & typeof its postMessage is 'object'
@@ -586,7 +774,7 @@ if(!setTask || !clearTask){
     defer = function(id){
       global.postMessage(id + '', '*');
     };
-    global.addEventListener('message', listner, false);
+    global.addEventListener('message', listener, false);
   // IE8-
   } else if(ONREADYSTATECHANGE in cel('script')){
     defer = function(id){
@@ -606,62 +794,93 @@ module.exports = {
   set:   setTask,
   clear: clearTask
 };
-},{"./$.cof":7,"./$.ctx":9,"./$.dom-create":12,"./$.global":16,"./$.html":19,"./$.invoke":20}],45:[function(require,module,exports){
+},{"./_cof":9,"./_ctx":11,"./_dom-create":14,"./_global":19,"./_html":22,"./_invoke":24}],55:[function(require,module,exports){
+var toInteger = require('./_to-integer')
+  , max       = Math.max
+  , min       = Math.min;
+module.exports = function(index, length){
+  index = toInteger(index);
+  return index < 0 ? max(index + length, 0) : min(index, length);
+};
+},{"./_to-integer":56}],56:[function(require,module,exports){
 // 7.1.4 ToInteger
 var ceil  = Math.ceil
   , floor = Math.floor;
 module.exports = function(it){
   return isNaN(it = +it) ? 0 : (it > 0 ? floor : ceil)(it);
 };
-},{}],46:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 // to indexed object, toObject with fallback for non-array-like ES3 strings
-var IObject = require('./$.iobject')
-  , defined = require('./$.defined');
+var IObject = require('./_iobject')
+  , defined = require('./_defined');
 module.exports = function(it){
   return IObject(defined(it));
 };
-},{"./$.defined":10,"./$.iobject":21}],47:[function(require,module,exports){
+},{"./_defined":12,"./_iobject":25}],58:[function(require,module,exports){
 // 7.1.15 ToLength
-var toInteger = require('./$.to-integer')
+var toInteger = require('./_to-integer')
   , min       = Math.min;
 module.exports = function(it){
   return it > 0 ? min(toInteger(it), 0x1fffffffffffff) : 0; // pow(2, 53) - 1 == 9007199254740991
 };
-},{"./$.to-integer":45}],48:[function(require,module,exports){
+},{"./_to-integer":56}],59:[function(require,module,exports){
+// 7.1.13 ToObject(argument)
+var defined = require('./_defined');
+module.exports = function(it){
+  return Object(defined(it));
+};
+},{"./_defined":12}],60:[function(require,module,exports){
+// 7.1.1 ToPrimitive(input [, PreferredType])
+var isObject = require('./_is-object');
+// instead of the ES6 spec version, we didn't implement @@toPrimitive case
+// and the second argument - flag - preferred type is a string
+module.exports = function(it, S){
+  if(!isObject(it))return it;
+  var fn, val;
+  if(S && typeof (fn = it.toString) == 'function' && !isObject(val = fn.call(it)))return val;
+  if(typeof (fn = it.valueOf) == 'function' && !isObject(val = fn.call(it)))return val;
+  if(!S && typeof (fn = it.toString) == 'function' && !isObject(val = fn.call(it)))return val;
+  throw TypeError("Can't convert object to primitive value");
+};
+},{"./_is-object":27}],61:[function(require,module,exports){
 var id = 0
   , px = Math.random();
 module.exports = function(key){
   return 'Symbol('.concat(key === undefined ? '' : key, ')_', (++id + px).toString(36));
 };
-},{}],49:[function(require,module,exports){
-var store  = require('./$.shared')('wks')
-  , uid    = require('./$.uid')
-  , Symbol = require('./$.global').Symbol;
-module.exports = function(name){
+},{}],62:[function(require,module,exports){
+var store      = require('./_shared')('wks')
+  , uid        = require('./_uid')
+  , Symbol     = require('./_global').Symbol
+  , USE_SYMBOL = typeof Symbol == 'function';
+
+var $exports = module.exports = function(name){
   return store[name] || (store[name] =
-    Symbol && Symbol[name] || (Symbol || uid)('Symbol.' + name));
+    USE_SYMBOL && Symbol[name] || (USE_SYMBOL ? Symbol : uid)('Symbol.' + name));
 };
-},{"./$.global":16,"./$.shared":40,"./$.uid":48}],50:[function(require,module,exports){
-var classof   = require('./$.classof')
-  , ITERATOR  = require('./$.wks')('iterator')
-  , Iterators = require('./$.iterators');
-module.exports = require('./$.core').getIteratorMethod = function(it){
+
+$exports.store = store;
+},{"./_global":19,"./_shared":51,"./_uid":61}],63:[function(require,module,exports){
+var classof   = require('./_classof')
+  , ITERATOR  = require('./_wks')('iterator')
+  , Iterators = require('./_iterators');
+module.exports = require('./_core').getIteratorMethod = function(it){
   if(it != undefined)return it[ITERATOR]
     || it['@@iterator']
     || Iterators[classof(it)];
 };
-},{"./$.classof":6,"./$.core":8,"./$.iterators":29,"./$.wks":49}],51:[function(require,module,exports){
+},{"./_classof":8,"./_core":10,"./_iterators":33,"./_wks":62}],64:[function(require,module,exports){
 'use strict';
-var addToUnscopables = require('./$.add-to-unscopables')
-  , step             = require('./$.iter-step')
-  , Iterators        = require('./$.iterators')
-  , toIObject        = require('./$.to-iobject');
+var addToUnscopables = require('./_add-to-unscopables')
+  , step             = require('./_iter-step')
+  , Iterators        = require('./_iterators')
+  , toIObject        = require('./_to-iobject');
 
 // 22.1.3.4 Array.prototype.entries()
 // 22.1.3.13 Array.prototype.keys()
 // 22.1.3.29 Array.prototype.values()
 // 22.1.3.30 Array.prototype[@@iterator]()
-module.exports = require('./$.iter-define')(Array, 'Array', function(iterated, kind){
+module.exports = require('./_iter-define')(Array, 'Array', function(iterated, kind){
   this._t = toIObject(iterated); // target
   this._i = 0;                   // next index
   this._k = kind;                // kind
@@ -685,88 +904,66 @@ Iterators.Arguments = Iterators.Array;
 addToUnscopables('keys');
 addToUnscopables('values');
 addToUnscopables('entries');
-},{"./$.add-to-unscopables":4,"./$.iter-define":26,"./$.iter-step":28,"./$.iterators":29,"./$.to-iobject":46}],52:[function(require,module,exports){
+},{"./_add-to-unscopables":4,"./_iter-define":30,"./_iter-step":32,"./_iterators":33,"./_to-iobject":57}],65:[function(require,module,exports){
 
-},{}],53:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 'use strict';
-var $          = require('./$')
-  , LIBRARY    = require('./$.library')
-  , global     = require('./$.global')
-  , ctx        = require('./$.ctx')
-  , classof    = require('./$.classof')
-  , $export    = require('./$.export')
-  , isObject   = require('./$.is-object')
-  , anObject   = require('./$.an-object')
-  , aFunction  = require('./$.a-function')
-  , strictNew  = require('./$.strict-new')
-  , forOf      = require('./$.for-of')
-  , setProto   = require('./$.set-proto').set
-  , same       = require('./$.same-value')
-  , SPECIES    = require('./$.wks')('species')
-  , speciesConstructor = require('./$.species-constructor')
-  , asap       = require('./$.microtask')
-  , PROMISE    = 'Promise'
-  , process    = global.process
-  , isNode     = classof(process) == 'process'
-  , P          = global[PROMISE]
-  , Wrapper;
+var LIBRARY            = require('./_library')
+  , global             = require('./_global')
+  , ctx                = require('./_ctx')
+  , classof            = require('./_classof')
+  , $export            = require('./_export')
+  , isObject           = require('./_is-object')
+  , anObject           = require('./_an-object')
+  , aFunction          = require('./_a-function')
+  , anInstance         = require('./_an-instance')
+  , forOf              = require('./_for-of')
+  , setProto           = require('./_set-proto').set
+  , speciesConstructor = require('./_species-constructor')
+  , task               = require('./_task').set
+  , microtask          = require('./_microtask')()
+  , PROMISE            = 'Promise'
+  , TypeError          = global.TypeError
+  , process            = global.process
+  , $Promise           = global[PROMISE]
+  , process            = global.process
+  , isNode             = classof(process) == 'process'
+  , empty              = function(){ /* empty */ }
+  , Internal, GenericPromiseCapability, Wrapper;
 
-var testResolve = function(sub){
-  var test = new P(function(){});
-  if(sub)test.constructor = Object;
-  return P.resolve(test) === test;
-};
-
-var USE_NATIVE = function(){
-  var works = false;
-  function P2(x){
-    var self = new P(x);
-    setProto(self, P2.prototype);
-    return self;
-  }
+var USE_NATIVE = !!function(){
   try {
-    works = P && P.resolve && testResolve();
-    setProto(P2, P);
-    P2.prototype = $.create(P.prototype, {constructor: {value: P2}});
-    // actual Firefox has broken subclass support, test that
-    if(!(P2.resolve(5).then(function(){}) instanceof P2)){
-      works = false;
-    }
-    // actual V8 bug, https://code.google.com/p/v8/issues/detail?id=4162
-    if(works && require('./$.descriptors')){
-      var thenableThenGotten = false;
-      P.resolve($.setDesc({}, 'then', {
-        get: function(){ thenableThenGotten = true; }
-      }));
-      works = thenableThenGotten;
-    }
-  } catch(e){ works = false; }
-  return works;
+    // correct subclassing with @@species support
+    var promise     = $Promise.resolve(1)
+      , FakePromise = (promise.constructor = {})[require('./_wks')('species')] = function(exec){ exec(empty, empty); };
+    // unhandled rejections tracking support, NodeJS Promise without it fails @@species test
+    return (isNode || typeof PromiseRejectionEvent == 'function') && promise.then(empty) instanceof FakePromise;
+  } catch(e){ /* empty */ }
 }();
 
 // helpers
 var sameConstructor = function(a, b){
-  // library wrapper special case
-  if(LIBRARY && a === P && b === Wrapper)return true;
-  return same(a, b);
-};
-var getConstructor = function(C){
-  var S = anObject(C)[SPECIES];
-  return S != undefined ? S : C;
+  // with library wrapper special case
+  return a === b || a === $Promise && b === Wrapper;
 };
 var isThenable = function(it){
   var then;
   return isObject(it) && typeof (then = it.then) == 'function' ? then : false;
 };
-var PromiseCapability = function(C){
+var newPromiseCapability = function(C){
+  return sameConstructor($Promise, C)
+    ? new PromiseCapability(C)
+    : new GenericPromiseCapability(C);
+};
+var PromiseCapability = GenericPromiseCapability = function(C){
   var resolve, reject;
   this.promise = new C(function($$resolve, $$reject){
     if(resolve !== undefined || reject !== undefined)throw TypeError('Bad Promise constructor');
     resolve = $$resolve;
     reject  = $$reject;
   });
-  this.resolve = aFunction(resolve),
-  this.reject  = aFunction(reject)
+  this.resolve = aFunction(resolve);
+  this.reject  = aFunction(reject);
 };
 var perform = function(exec){
   try {
@@ -775,23 +972,32 @@ var perform = function(exec){
     return {error: e};
   }
 };
-var notify = function(record, isReject){
-  if(record.n)return;
-  record.n = true;
-  var chain = record.c;
-  asap(function(){
-    var value = record.v
-      , ok    = record.s == 1
+var notify = function(promise, isReject){
+  if(promise._n)return;
+  promise._n = true;
+  var chain = promise._c;
+  microtask(function(){
+    var value = promise._v
+      , ok    = promise._s == 1
       , i     = 0;
     var run = function(reaction){
       var handler = ok ? reaction.ok : reaction.fail
         , resolve = reaction.resolve
         , reject  = reaction.reject
+        , domain  = reaction.domain
         , result, then;
       try {
         if(handler){
-          if(!ok)record.h = true;
-          result = handler === true ? value : handler(value);
+          if(!ok){
+            if(promise._h == 2)onHandleUnhandled(promise);
+            promise._h = 1;
+          }
+          if(handler === true)result = value;
+          else {
+            if(domain)domain.enter();
+            result = handler(value);
+            if(domain)domain.exit();
+          }
           if(result === reaction.promise){
             reject(TypeError('Promise-chain cycle'));
           } else if(then = isThenable(result)){
@@ -803,12 +1009,17 @@ var notify = function(record, isReject){
       }
     };
     while(chain.length > i)run(chain[i++]); // variable length - can't use forEach
-    chain.length = 0;
-    record.n = false;
-    if(isReject)setTimeout(function(){
-      var promise = record.p
-        , handler, console;
-      if(isUnhandled(promise)){
+    promise._c = [];
+    promise._n = false;
+    if(isReject && !promise._h)onUnhandled(promise);
+  });
+};
+var onUnhandled = function(promise){
+  task.call(global, function(){
+    var value = promise._v
+      , abrupt, handler, console;
+    if(isUnhandled(promise)){
+      abrupt = perform(function(){
         if(isNode){
           process.emit('unhandledRejection', value, promise);
         } else if(handler = global.onunhandledrejection){
@@ -816,42 +1027,54 @@ var notify = function(record, isReject){
         } else if((console = global.console) && console.error){
           console.error('Unhandled promise rejection', value);
         }
-      } record.a = undefined;
-    }, 1);
+      });
+      // Browsers should not trigger `rejectionHandled` event if it was handled here, NodeJS - should
+      promise._h = isNode || isUnhandled(promise) ? 2 : 1;
+    } promise._a = undefined;
+    if(abrupt)throw abrupt.error;
   });
 };
 var isUnhandled = function(promise){
-  var record = promise._d
-    , chain  = record.a || record.c
-    , i      = 0
+  if(promise._h == 1)return false;
+  var chain = promise._a || promise._c
+    , i     = 0
     , reaction;
-  if(record.h)return false;
   while(chain.length > i){
     reaction = chain[i++];
     if(reaction.fail || !isUnhandled(reaction.promise))return false;
   } return true;
 };
+var onHandleUnhandled = function(promise){
+  task.call(global, function(){
+    var handler;
+    if(isNode){
+      process.emit('rejectionHandled', promise);
+    } else if(handler = global.onrejectionhandled){
+      handler({promise: promise, reason: promise._v});
+    }
+  });
+};
 var $reject = function(value){
-  var record = this;
-  if(record.d)return;
-  record.d = true;
-  record = record.r || record; // unwrap
-  record.v = value;
-  record.s = 2;
-  record.a = record.c.slice();
-  notify(record, true);
+  var promise = this;
+  if(promise._d)return;
+  promise._d = true;
+  promise = promise._w || promise; // unwrap
+  promise._v = value;
+  promise._s = 2;
+  if(!promise._a)promise._a = promise._c.slice();
+  notify(promise, true);
 };
 var $resolve = function(value){
-  var record = this
+  var promise = this
     , then;
-  if(record.d)return;
-  record.d = true;
-  record = record.r || record; // unwrap
+  if(promise._d)return;
+  promise._d = true;
+  promise = promise._w || promise; // unwrap
   try {
-    if(record.p === value)throw TypeError("Promise can't be resolved itself");
+    if(promise === value)throw TypeError("Promise can't be resolved itself");
     if(then = isThenable(value)){
-      asap(function(){
-        var wrapper = {r: record, d: false}; // wrap
+      microtask(function(){
+        var wrapper = {_w: promise, _d: false}; // wrap
         try {
           then.call(value, ctx($resolve, wrapper, 1), ctx($reject, wrapper, 1));
         } catch(e){
@@ -859,114 +1082,122 @@ var $resolve = function(value){
         }
       });
     } else {
-      record.v = value;
-      record.s = 1;
-      notify(record, false);
+      promise._v = value;
+      promise._s = 1;
+      notify(promise, false);
     }
   } catch(e){
-    $reject.call({r: record, d: false}, e); // wrap
+    $reject.call({_w: promise, _d: false}, e); // wrap
   }
 };
 
 // constructor polyfill
 if(!USE_NATIVE){
   // 25.4.3.1 Promise(executor)
-  P = function Promise(executor){
+  $Promise = function Promise(executor){
+    anInstance(this, $Promise, PROMISE, '_h');
     aFunction(executor);
-    var record = this._d = {
-      p: strictNew(this, P, PROMISE),         // <- promise
-      c: [],                                  // <- awaiting reactions
-      a: undefined,                           // <- checked in isUnhandled reactions
-      s: 0,                                   // <- state
-      d: false,                               // <- done
-      v: undefined,                           // <- value
-      h: false,                               // <- handled rejection
-      n: false                                // <- notify
-    };
+    Internal.call(this);
     try {
-      executor(ctx($resolve, record, 1), ctx($reject, record, 1));
+      executor(ctx($resolve, this, 1), ctx($reject, this, 1));
     } catch(err){
-      $reject.call(record, err);
+      $reject.call(this, err);
     }
   };
-  require('./$.redefine-all')(P.prototype, {
+  Internal = function Promise(executor){
+    this._c = [];             // <- awaiting reactions
+    this._a = undefined;      // <- checked in isUnhandled reactions
+    this._s = 0;              // <- state
+    this._d = false;          // <- done
+    this._v = undefined;      // <- value
+    this._h = 0;              // <- rejection state, 0 - default, 1 - handled, 2 - unhandled
+    this._n = false;          // <- notify
+  };
+  Internal.prototype = require('./_redefine-all')($Promise.prototype, {
     // 25.4.5.3 Promise.prototype.then(onFulfilled, onRejected)
     then: function then(onFulfilled, onRejected){
-      var reaction = new PromiseCapability(speciesConstructor(this, P))
-        , promise  = reaction.promise
-        , record   = this._d;
-      reaction.ok   = typeof onFulfilled == 'function' ? onFulfilled : true;
-      reaction.fail = typeof onRejected == 'function' && onRejected;
-      record.c.push(reaction);
-      if(record.a)record.a.push(reaction);
-      if(record.s)notify(record, false);
-      return promise;
+      var reaction    = newPromiseCapability(speciesConstructor(this, $Promise));
+      reaction.ok     = typeof onFulfilled == 'function' ? onFulfilled : true;
+      reaction.fail   = typeof onRejected == 'function' && onRejected;
+      reaction.domain = isNode ? process.domain : undefined;
+      this._c.push(reaction);
+      if(this._a)this._a.push(reaction);
+      if(this._s)notify(this, false);
+      return reaction.promise;
     },
     // 25.4.5.1 Promise.prototype.catch(onRejected)
     'catch': function(onRejected){
       return this.then(undefined, onRejected);
     }
   });
+  PromiseCapability = function(){
+    var promise  = new Internal;
+    this.promise = promise;
+    this.resolve = ctx($resolve, promise, 1);
+    this.reject  = ctx($reject, promise, 1);
+  };
 }
 
-$export($export.G + $export.W + $export.F * !USE_NATIVE, {Promise: P});
-require('./$.set-to-string-tag')(P, PROMISE);
-require('./$.set-species')(PROMISE);
-Wrapper = require('./$.core')[PROMISE];
+$export($export.G + $export.W + $export.F * !USE_NATIVE, {Promise: $Promise});
+require('./_set-to-string-tag')($Promise, PROMISE);
+require('./_set-species')(PROMISE);
+Wrapper = require('./_core')[PROMISE];
 
 // statics
 $export($export.S + $export.F * !USE_NATIVE, PROMISE, {
   // 25.4.4.5 Promise.reject(r)
   reject: function reject(r){
-    var capability = new PromiseCapability(this)
+    var capability = newPromiseCapability(this)
       , $$reject   = capability.reject;
     $$reject(r);
     return capability.promise;
   }
 });
-$export($export.S + $export.F * (!USE_NATIVE || testResolve(true)), PROMISE, {
+$export($export.S + $export.F * (LIBRARY || !USE_NATIVE), PROMISE, {
   // 25.4.4.6 Promise.resolve(x)
   resolve: function resolve(x){
     // instanceof instead of internal slot check because we should fix it without replacement native Promise core
-    if(x instanceof P && sameConstructor(x.constructor, this))return x;
-    var capability = new PromiseCapability(this)
+    if(x instanceof $Promise && sameConstructor(x.constructor, this))return x;
+    var capability = newPromiseCapability(this)
       , $$resolve  = capability.resolve;
     $$resolve(x);
     return capability.promise;
   }
 });
-$export($export.S + $export.F * !(USE_NATIVE && require('./$.iter-detect')(function(iter){
-  P.all(iter)['catch'](function(){});
+$export($export.S + $export.F * !(USE_NATIVE && require('./_iter-detect')(function(iter){
+  $Promise.all(iter)['catch'](empty);
 })), PROMISE, {
   // 25.4.4.1 Promise.all(iterable)
   all: function all(iterable){
-    var C          = getConstructor(this)
-      , capability = new PromiseCapability(C)
+    var C          = this
+      , capability = newPromiseCapability(C)
       , resolve    = capability.resolve
-      , reject     = capability.reject
-      , values     = [];
+      , reject     = capability.reject;
     var abrupt = perform(function(){
-      forOf(iterable, false, values.push, values);
-      var remaining = values.length
-        , results   = Array(remaining);
-      if(remaining)$.each.call(values, function(promise, index){
-        var alreadyCalled = false;
+      var values    = []
+        , index     = 0
+        , remaining = 1;
+      forOf(iterable, false, function(promise){
+        var $index        = index++
+          , alreadyCalled = false;
+        values.push(undefined);
+        remaining++;
         C.resolve(promise).then(function(value){
           if(alreadyCalled)return;
-          alreadyCalled = true;
-          results[index] = value;
-          --remaining || resolve(results);
+          alreadyCalled  = true;
+          values[$index] = value;
+          --remaining || resolve(values);
         }, reject);
       });
-      else resolve(results);
+      --remaining || resolve(values);
     });
     if(abrupt)reject(abrupt.error);
     return capability.promise;
   },
   // 25.4.4.4 Promise.race(iterable)
   race: function race(iterable){
-    var C          = getConstructor(this)
-      , capability = new PromiseCapability(C)
+    var C          = this
+      , capability = newPromiseCapability(C)
       , reject     = capability.reject;
     var abrupt = perform(function(){
       forOf(iterable, false, function(promise){
@@ -977,12 +1208,12 @@ $export($export.S + $export.F * !(USE_NATIVE && require('./$.iter-detect')(funct
     return capability.promise;
   }
 });
-},{"./$":30,"./$.a-function":3,"./$.an-object":5,"./$.classof":6,"./$.core":8,"./$.ctx":9,"./$.descriptors":11,"./$.export":13,"./$.for-of":15,"./$.global":16,"./$.is-object":23,"./$.iter-detect":27,"./$.library":31,"./$.microtask":32,"./$.redefine-all":34,"./$.same-value":36,"./$.set-proto":37,"./$.set-species":38,"./$.set-to-string-tag":39,"./$.species-constructor":41,"./$.strict-new":42,"./$.wks":49}],54:[function(require,module,exports){
+},{"./_a-function":3,"./_an-instance":5,"./_an-object":6,"./_classof":8,"./_core":10,"./_ctx":11,"./_export":16,"./_for-of":18,"./_global":19,"./_is-object":27,"./_iter-detect":31,"./_library":34,"./_microtask":35,"./_redefine-all":45,"./_set-proto":47,"./_set-species":48,"./_set-to-string-tag":49,"./_species-constructor":52,"./_task":54,"./_wks":62}],67:[function(require,module,exports){
 'use strict';
-var $at  = require('./$.string-at')(true);
+var $at  = require('./_string-at')(true);
 
 // 21.1.3.27 String.prototype[@@iterator]()
-require('./$.iter-define')(String, 'String', function(iterated){
+require('./_iter-define')(String, 'String', function(iterated){
   this._t = String(iterated); // target
   this._i = 0;                // next index
 // 21.1.5.2.1 %StringIteratorPrototype%.next()
@@ -995,11 +1226,21 @@ require('./$.iter-define')(String, 'String', function(iterated){
   this._i += point.length;
   return {value: point, done: false};
 });
-},{"./$.iter-define":26,"./$.string-at":43}],55:[function(require,module,exports){
+},{"./_iter-define":30,"./_string-at":53}],68:[function(require,module,exports){
 require('./es6.array.iterator');
-var Iterators = require('./$.iterators');
-Iterators.NodeList = Iterators.HTMLCollection = Iterators.Array;
-},{"./$.iterators":29,"./es6.array.iterator":51}],56:[function(require,module,exports){
+var global        = require('./_global')
+  , hide          = require('./_hide')
+  , Iterators     = require('./_iterators')
+  , TO_STRING_TAG = require('./_wks')('toStringTag');
+
+for(var collections = ['NodeList', 'DOMTokenList', 'MediaList', 'StyleSheetList', 'CSSRuleList'], i = 0; i < 5; i++){
+  var NAME       = collections[i]
+    , Collection = global[NAME]
+    , proto      = Collection && Collection.prototype;
+  if(proto && !proto[TO_STRING_TAG])hide(proto, TO_STRING_TAG, NAME);
+  Iterators[NAME] = Iterators.Array;
+}
+},{"./_global":19,"./_hide":21,"./_iterators":33,"./_wks":62,"./es6.array.iterator":64}],69:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -1054,14 +1295,14 @@ module.exports = function debounce(func, wait, immediate){
   };
 };
 
-},{"date-now":57}],57:[function(require,module,exports){
+},{"date-now":70}],70:[function(require,module,exports){
 module.exports = Date.now || now
 
 function now() {
     return new Date().getTime()
 }
 
-},{}],58:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1071,6 +1312,9 @@ var currentQueue;
 var queueIndex = -1;
 
 function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
     draining = false;
     if (currentQueue.length) {
         queue = currentQueue.concat(queue);
@@ -1154,7 +1398,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],59:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 function E () {
 	// Keep this empty so it's easier to inherit from
   // (via https://github.com/lipsmack from https://github.com/scottcorgan/tiny-emitter/issues/3)
@@ -1222,7 +1466,7 @@ E.prototype = {
 
 module.exports = E;
 
-},{}],60:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 var Vue // late bind
 var map = Object.create(null)
 var shimmed = false
@@ -1522,7 +1766,7 @@ function format (id) {
   return id.match(/[^\/]+\.vue$/)[0]
 }
 
-},{}],61:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 'use strict';
 
 var windowsill = require('windowsill');
@@ -1545,7 +1789,7 @@ module.exports = {
       }
   }
 };
-},{"windowsill":92}],62:[function(require,module,exports){
+},{"windowsill":105}],75:[function(require,module,exports){
 /**
  * Before Interceptor.
  */
@@ -1565,7 +1809,7 @@ module.exports = {
 
 };
 
-},{"../util":85}],63:[function(require,module,exports){
+},{"../util":98}],76:[function(require,module,exports){
 /**
  * Base client.
  */
@@ -1632,7 +1876,7 @@ function parseHeaders(str) {
     return headers;
 }
 
-},{"../../promise":78,"../../util":85,"./xhr":66}],64:[function(require,module,exports){
+},{"../../promise":91,"../../util":98,"./xhr":79}],77:[function(require,module,exports){
 /**
  * JSONP client.
  */
@@ -1682,7 +1926,7 @@ module.exports = function (request) {
     });
 };
 
-},{"../../promise":78,"../../util":85}],65:[function(require,module,exports){
+},{"../../promise":91,"../../util":98}],78:[function(require,module,exports){
 /**
  * XDomain client (Internet Explorer).
  */
@@ -1721,7 +1965,7 @@ module.exports = function (request) {
     });
 };
 
-},{"../../promise":78,"../../util":85}],66:[function(require,module,exports){
+},{"../../promise":91,"../../util":98}],79:[function(require,module,exports){
 /**
  * XMLHttp client.
  */
@@ -1773,7 +2017,7 @@ module.exports = function (request) {
     });
 };
 
-},{"../../promise":78,"../../util":85}],67:[function(require,module,exports){
+},{"../../promise":91,"../../util":98}],80:[function(require,module,exports){
 /**
  * CORS Interceptor.
  */
@@ -1812,7 +2056,7 @@ function crossOrigin(request) {
     return (requestUrl.protocol !== originUrl.protocol || requestUrl.host !== originUrl.host);
 }
 
-},{"../util":85,"./client/xdr":65}],68:[function(require,module,exports){
+},{"../util":98,"./client/xdr":78}],81:[function(require,module,exports){
 /**
  * Header Interceptor.
  */
@@ -1840,7 +2084,7 @@ module.exports = {
 
 };
 
-},{"../util":85}],69:[function(require,module,exports){
+},{"../util":98}],82:[function(require,module,exports){
 /**
  * Service for sending network requests.
  */
@@ -1940,7 +2184,7 @@ Http.headers = {
 
 module.exports = _.http = Http;
 
-},{"../promise":78,"../util":85,"./before":62,"./client":63,"./cors":67,"./header":68,"./interceptor":70,"./jsonp":71,"./method":72,"./mime":73,"./timeout":74}],70:[function(require,module,exports){
+},{"../promise":91,"../util":98,"./before":75,"./client":76,"./cors":80,"./header":81,"./interceptor":83,"./jsonp":84,"./method":85,"./mime":86,"./timeout":87}],83:[function(require,module,exports){
 /**
  * Interceptor factory.
  */
@@ -1987,7 +2231,7 @@ function when(value, fulfilled, rejected) {
     return promise.then(fulfilled, rejected);
 }
 
-},{"../promise":78,"../util":85}],71:[function(require,module,exports){
+},{"../promise":91,"../util":98}],84:[function(require,module,exports){
 /**
  * JSONP Interceptor.
  */
@@ -2007,7 +2251,7 @@ module.exports = {
 
 };
 
-},{"./client/jsonp":64}],72:[function(require,module,exports){
+},{"./client/jsonp":77}],85:[function(require,module,exports){
 /**
  * HTTP method override Interceptor.
  */
@@ -2026,7 +2270,7 @@ module.exports = {
 
 };
 
-},{}],73:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 /**
  * Mime Interceptor.
  */
@@ -2064,7 +2308,7 @@ module.exports = {
 
 };
 
-},{"../util":85}],74:[function(require,module,exports){
+},{"../util":98}],87:[function(require,module,exports){
 /**
  * Timeout Interceptor.
  */
@@ -2096,7 +2340,7 @@ module.exports = function () {
     };
 };
 
-},{}],75:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 /**
  * Install plugin.
  */
@@ -2151,7 +2395,7 @@ if (window.Vue) {
 
 module.exports = install;
 
-},{"./http":69,"./promise":78,"./resource":79,"./url":80,"./util":85}],76:[function(require,module,exports){
+},{"./http":82,"./promise":91,"./resource":92,"./url":93,"./util":98}],89:[function(require,module,exports){
 /**
  * Promises/A+ polyfill v1.1.4 (https://github.com/bramstein/promis)
  */
@@ -2332,7 +2576,7 @@ p.catch = function (onRejected) {
 
 module.exports = Promise;
 
-},{"../util":85}],77:[function(require,module,exports){
+},{"../util":98}],90:[function(require,module,exports){
 /**
  * URL Template v2.0.6 (https://github.com/bramstein/url-template)
  */
@@ -2484,7 +2728,7 @@ exports.encodeReserved = function (str) {
     }).join('');
 };
 
-},{}],78:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 /**
  * Promise adapter.
  */
@@ -2595,7 +2839,7 @@ p.always = function (callback) {
 
 module.exports = Promise;
 
-},{"./lib/promise":76,"./util":85}],79:[function(require,module,exports){
+},{"./lib/promise":89,"./util":98}],92:[function(require,module,exports){
 /**
  * Service for interacting with RESTful services.
  */
@@ -2707,7 +2951,7 @@ Resource.actions = {
 
 module.exports = _.resource = Resource;
 
-},{"./util":85}],80:[function(require,module,exports){
+},{"./util":98}],93:[function(require,module,exports){
 /**
  * Service for URL templating.
  */
@@ -2839,7 +3083,7 @@ function serialize(params, obj, scope) {
 
 module.exports = _.url = Url;
 
-},{"../util":85,"./legacy":81,"./query":82,"./root":83,"./template":84}],81:[function(require,module,exports){
+},{"../util":98,"./legacy":94,"./query":95,"./root":96,"./template":97}],94:[function(require,module,exports){
 /**
  * Legacy Transform.
  */
@@ -2887,7 +3131,7 @@ function encodeUriQuery(value, spaces) {
         replace(/%20/g, (spaces ? '%20' : '+'));
 }
 
-},{"../util":85}],82:[function(require,module,exports){
+},{"../util":98}],95:[function(require,module,exports){
 /**
  * Query Parameter Transform.
  */
@@ -2913,7 +3157,7 @@ module.exports = function (options, next) {
     return url;
 };
 
-},{"../util":85}],83:[function(require,module,exports){
+},{"../util":98}],96:[function(require,module,exports){
 /**
  * Root Prefix Transform.
  */
@@ -2931,7 +3175,7 @@ module.exports = function (options, next) {
     return url;
 };
 
-},{"../util":85}],84:[function(require,module,exports){
+},{"../util":98}],97:[function(require,module,exports){
 /**
  * URL Template (RFC 6570) Transform.
  */
@@ -2949,7 +3193,7 @@ module.exports = function (options) {
     return url;
 };
 
-},{"../lib/url-template":77}],85:[function(require,module,exports){
+},{"../lib/url-template":90}],98:[function(require,module,exports){
 /**
  * Utility functions.
  */
@@ -3073,9 +3317,9 @@ function merge(target, source, deep) {
     }
 }
 
-},{}],86:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 /*!
- * vue-router v0.7.11
+ * vue-router v0.7.13
  * (c) 2016 Evan You
  * Released under the MIT License.
  */
@@ -3200,6 +3444,21 @@ function merge(target, source, deep) {
   var specials = ['/', '.', '*', '+', '?', '|', '(', ')', '[', ']', '{', '}', '\\'];
 
   var escapeRegex = new RegExp('(\\' + specials.join('|\\') + ')', 'g');
+
+  var noWarning = false;
+  function warn(msg) {
+    if (!noWarning && typeof console !== 'undefined') {
+      console.error('[vue-router] ' + msg);
+    }
+  }
+
+  function tryDecode(uri, asComponent) {
+    try {
+      return asComponent ? decodeURIComponent(uri) : decodeURI(uri);
+    } catch (e) {
+      warn('malformed URI' + (asComponent ? ' component: ' : ': ') + uri);
+    }
+  }
 
   function isArray(test) {
     return Object.prototype.toString.call(test) === "[object Array]";
@@ -3541,7 +3800,7 @@ function merge(target, source, deep) {
   function decodeQueryParamPart(part) {
     // http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4.1
     part = part.replace(/\+/gm, '%20');
-    return decodeURIComponent(part);
+    return tryDecode(part, true);
   }
 
   // The main interface
@@ -3723,7 +3982,8 @@ function merge(target, source, deep) {
       return queryParams;
     },
 
-    recognize: function recognize(path) {
+    recognize: function recognize(path, silent) {
+      noWarning = silent;
       var states = [this.rootState],
           pathLen,
           i,
@@ -3736,10 +3996,13 @@ function merge(target, source, deep) {
       if (queryStart !== -1) {
         var queryString = path.substr(queryStart + 1, path.length);
         path = path.substr(0, queryStart);
-        queryParams = this.parseQueryString(queryString);
+        if (queryString) {
+          queryParams = this.parseQueryString(queryString);
+        }
       }
 
-      path = decodeURI(path);
+      path = tryDecode(path);
+      if (!path) return;
 
       // DEBUG GROUP path
 
@@ -3786,8 +4049,6 @@ function merge(target, source, deep) {
 
   RouteRecognizer.prototype.map = map;
 
-  RouteRecognizer.VERSION = '0.1.9';
-
   var genQuery = RouteRecognizer.prototype.generateQueryString;
 
   // export default for holding the Vue reference
@@ -3798,13 +4059,10 @@ function merge(target, source, deep) {
    * @param {String} msg
    */
 
-  function warn(msg) {
+  function warn$1(msg) {
     /* istanbul ignore next */
-    if (window.console) {
-      console.warn('[vue-router] ' + msg);
-      if (!exports$1.Vue || exports$1.Vue.config.debug) {
-        console.warn(new Error('warning stack trace:').stack);
-      }
+    if (typeof console !== 'undefined') {
+      console.error('[vue-router] ' + msg);
     }
   }
 
@@ -3923,7 +4181,7 @@ function merge(target, source, deep) {
       var val = params[key];
       /* istanbul ignore if */
       if (!val) {
-        warn('param "' + key + '" not found when generating ' + 'path for "' + path + '" with params ' + JSON.stringify(params));
+        warn$1('param "' + key + '" not found when generating ' + 'path for "' + path + '" with params ' + JSON.stringify(params));
       }
       return val || '';
     });
@@ -3941,7 +4199,7 @@ function merge(target, source, deep) {
       var onChange = _ref.onChange;
       babelHelpers.classCallCheck(this, HTML5History);
 
-      if (root) {
+      if (root && root !== '/') {
         // make sure there's the starting slash
         if (root.charAt(0) !== '/') {
           root = '/' + root;
@@ -3962,7 +4220,7 @@ function merge(target, source, deep) {
       var _this = this;
 
       this.listener = function (e) {
-        var url = decodeURI(location.pathname + location.search);
+        var url = location.pathname + location.search;
         if (_this.root) {
           url = url.replace(_this.rootRE, '');
         }
@@ -4038,7 +4296,7 @@ function merge(target, source, deep) {
         // note it's possible to have queries in both the actual URL
         // and the hash fragment itself.
         var query = location.search && path.indexOf('?') > -1 ? '&' + location.search.slice(1) : location.search;
-        self.onChange(decodeURI(path.replace(/^#!?/, '') + query));
+        self.onChange(path.replace(/^#!?/, '') + query);
       };
       window.addEventListener('hashchange', this.listener);
       this.listener();
@@ -4611,7 +4869,7 @@ function merge(target, source, deep) {
       var onError = function onError(err) {
         postActivate ? next() : abort();
         if (err && !transition.router._suppress) {
-          warn('Uncaught error during transition: ');
+          warn$1('Uncaught error during transition: ');
           throw err instanceof Error ? err : new Error(err);
         }
       };
@@ -4631,7 +4889,7 @@ function merge(target, source, deep) {
       // advance the transition to the next step
       var next = function next() {
         if (nextCalled) {
-          warn('transition.next() should be called only once.');
+          warn$1('transition.next() should be called only once.');
           return;
         }
         nextCalled = true;
@@ -4741,7 +4999,7 @@ function merge(target, source, deep) {
     return val ? Array.prototype.slice.call(val) : [];
   }
 
-  var internalKeysRE = /^(component|subRoutes)$/;
+  var internalKeysRE = /^(component|subRoutes|fullPath)$/;
 
   /**
    * Route Context Object
@@ -4778,9 +5036,13 @@ function merge(target, source, deep) {
     }
     // expose path and router
     this.path = path;
-    this.router = router;
     // for internal use
     this.matched = matched || router._notFoundHandler;
+    // internal reference to router
+    Object.defineProperty(this, 'router', {
+      enumerable: false,
+      value: router
+    });
     // Important: freeze self to prevent observation
     Object.freeze(this);
   };
@@ -4868,7 +5130,7 @@ function merge(target, source, deep) {
         var route = this.vm.$route;
         /* istanbul ignore if */
         if (!route) {
-          warn('<router-view> can only be used inside a ' + 'router-enabled app.');
+          warn$1('<router-view> can only be used inside a ' + 'router-enabled app.');
           return;
         }
         // force dynamic directive so v-component doesn't
@@ -4937,35 +5199,58 @@ function merge(target, source, deep) {
     var addClass = _Vue$util.addClass;
     var removeClass = _Vue$util.removeClass;
 
+    var onPriority = Vue.directive('on').priority;
+    var LINK_UPDATE = '__vue-router-link-update__';
+
+    var activeId = 0;
+
     Vue.directive('link-active', {
-      priority: 1001,
+      priority: 9999,
       bind: function bind() {
-        this.el.__v_link_active = true;
+        var _this = this;
+
+        var id = String(activeId++);
+        // collect v-links contained within this element.
+        // we need do this here before the parent-child relationship
+        // gets messed up by terminal directives (if, for, components)
+        var childLinks = this.el.querySelectorAll('[v-link]');
+        for (var i = 0, l = childLinks.length; i < l; i++) {
+          var link = childLinks[i];
+          var existingId = link.getAttribute(LINK_UPDATE);
+          var value = existingId ? existingId + ',' + id : id;
+          // leave a mark on the link element which can be persisted
+          // through fragment clones.
+          link.setAttribute(LINK_UPDATE, value);
+        }
+        this.vm.$on(LINK_UPDATE, this.cb = function (link, path) {
+          if (link.activeIds.indexOf(id) > -1) {
+            link.updateClasses(path, _this.el);
+          }
+        });
+      },
+      unbind: function unbind() {
+        this.vm.$off(LINK_UPDATE, this.cb);
       }
     });
 
     Vue.directive('link', {
-      priority: 1000,
+      priority: onPriority - 2,
 
       bind: function bind() {
         var vm = this.vm;
         /* istanbul ignore if */
         if (!vm.$route) {
-          warn('v-link can only be used inside a router-enabled app.');
+          warn$1('v-link can only be used inside a router-enabled app.');
           return;
         }
         this.router = vm.$route.router;
         // update things when the route changes
         this.unwatch = vm.$watch('$route', _bind(this.onRouteUpdate, this));
-        // check if active classes should be applied to a different element
-        this.activeEl = this.el;
-        var parent = this.el.parentNode;
-        while (parent) {
-          if (parent.__v_link_active) {
-            this.activeEl = parent;
-            break;
-          }
-          parent = parent.parentNode;
+        // check v-link-active ids
+        var activeIds = this.el.getAttribute(LINK_UPDATE);
+        if (activeIds) {
+          this.el.removeAttribute(LINK_UPDATE);
+          this.activeIds = activeIds.split(',');
         }
         // no need to handle click if link expects to be opened
         // in a new window/tab.
@@ -5013,8 +5298,12 @@ function merge(target, source, deep) {
           }
           if (el.tagName === 'A' && sameOrigin(el)) {
             e.preventDefault();
+            var path = el.pathname;
+            if (this.router.history.root) {
+              path = path.replace(this.router.history.rootRE, '');
+            }
             this.router.go({
-              path: el.pathname,
+              path: path,
               replace: target && target.replace,
               append: target && target.append
             });
@@ -5023,15 +5312,19 @@ function merge(target, source, deep) {
       },
 
       onRouteUpdate: function onRouteUpdate(route) {
-        // router._stringifyPath is dependent on current route
+        // router.stringifyPath is dependent on current route
         // and needs to be called again whenver route changes.
-        var newPath = this.router._stringifyPath(this.target);
+        var newPath = this.router.stringifyPath(this.target);
         if (this.path !== newPath) {
           this.path = newPath;
           this.updateActiveMatch();
           this.updateHref();
         }
-        this.updateClasses(route.path);
+        if (this.activeIds) {
+          this.vm.$emit(LINK_UPDATE, this, route.path);
+        } else {
+          this.updateClasses(route.path, this.el);
+        }
       },
 
       updateActiveMatch: function updateActiveMatch() {
@@ -5054,12 +5347,11 @@ function merge(target, source, deep) {
         }
       },
 
-      updateClasses: function updateClasses(path) {
-        var el = this.activeEl;
+      updateClasses: function updateClasses(path, el) {
         var activeClass = this.activeClass || this.router._linkActiveClass;
         // clear old class
-        if (this.prevActiveClass !== activeClass) {
-          removeClass(el, this.prevActiveClass);
+        if (this.prevActiveClass && this.prevActiveClass !== activeClass) {
+          toggleClasses(el, this.prevActiveClass, removeClass);
         }
         // remove query string before matching
         var dest = this.path.replace(queryStringRE, '');
@@ -5069,15 +5361,15 @@ function merge(target, source, deep) {
           if (dest === path ||
           // also allow additional trailing slash
           dest.charAt(dest.length - 1) !== '/' && dest === path.replace(trailingSlashRE, '')) {
-            addClass(el, activeClass);
+            toggleClasses(el, activeClass, addClass);
           } else {
-            removeClass(el, activeClass);
+            toggleClasses(el, activeClass, removeClass);
           }
         } else {
           if (this.activeRE && this.activeRE.test(path)) {
-            addClass(el, activeClass);
+            toggleClasses(el, activeClass, addClass);
           } else {
-            removeClass(el, activeClass);
+            toggleClasses(el, activeClass, removeClass);
           }
         }
       },
@@ -5090,6 +5382,20 @@ function merge(target, source, deep) {
 
     function sameOrigin(link) {
       return link.protocol === location.protocol && link.hostname === location.hostname && link.port === location.port;
+    }
+
+    // this function is copied from v-bind:class implementation until
+    // we properly expose it...
+    function toggleClasses(el, key, fn) {
+      key = key.trim();
+      if (key.indexOf(' ') === -1) {
+        fn(el, key);
+        return;
+      }
+      var keys = key.split(/\s+/);
+      for (var i = 0, l = keys.length; i < l; i++) {
+        fn(el, keys[i]);
+      }
     }
   }
 
@@ -5299,7 +5605,7 @@ function merge(target, source, deep) {
         replace = path.replace;
         append = path.append;
       }
-      path = this._stringifyPath(path);
+      path = this.stringifyPath(path);
       if (path) {
         this.history.go(path, replace, append);
       }
@@ -5330,7 +5636,7 @@ function merge(target, source, deep) {
     Router.prototype.start = function start(App, container, cb) {
       /* istanbul ignore if */
       if (this._started) {
-        warn('already started.');
+        warn$1('already started.');
         return;
       }
       this._started = true;
@@ -5372,6 +5678,41 @@ function merge(target, source, deep) {
     Router.prototype.stop = function stop() {
       this.history.stop();
       this._started = false;
+    };
+
+    /**
+     * Normalize named route object / string paths into
+     * a string.
+     *
+     * @param {Object|String|Number} path
+     * @return {String}
+     */
+
+    Router.prototype.stringifyPath = function stringifyPath(path) {
+      var generatedPath = '';
+      if (path && typeof path === 'object') {
+        if (path.name) {
+          var extend = Vue.util.extend;
+          var currentParams = this._currentTransition && this._currentTransition.to.params;
+          var targetParams = path.params || {};
+          var params = currentParams ? extend(extend({}, currentParams), targetParams) : targetParams;
+          generatedPath = encodeURI(this._recognizer.generate(path.name, params));
+        } else if (path.path) {
+          generatedPath = encodeURI(path.path);
+        }
+        if (path.query) {
+          // note: the generated query string is pre-URL-encoded by the recognizer
+          var query = this._recognizer.generateQueryString(path.query);
+          if (generatedPath.indexOf('?') > -1) {
+            generatedPath += '&' + query.slice(1);
+          } else {
+            generatedPath += query;
+          }
+        }
+      } else {
+        generatedPath = encodeURI(path ? path + '' : '');
+      }
+      return generatedPath;
     };
 
     // Internal methods ======================================
@@ -5476,7 +5817,7 @@ function merge(target, source, deep) {
      */
 
     Router.prototype._checkGuard = function _checkGuard(path) {
-      var matched = this._guardRecognizer.recognize(path);
+      var matched = this._guardRecognizer.recognize(path, true);
       if (matched) {
         matched[0].handler(matched[0], matched.queryParams);
         return true;
@@ -5639,43 +5980,6 @@ function merge(target, source, deep) {
       }
     };
 
-    /**
-     * Normalize named route object / string paths into
-     * a string.
-     *
-     * @param {Object|String|Number} path
-     * @return {String}
-     */
-
-    Router.prototype._stringifyPath = function _stringifyPath(path) {
-      var fullPath = '';
-      if (path && typeof path === 'object') {
-        if (path.name) {
-          var extend = Vue.util.extend;
-          var currentParams = this._currentTransition && this._currentTransition.to.params;
-          var targetParams = path.params || {};
-          var params = currentParams ? extend(extend({}, currentParams), targetParams) : targetParams;
-          if (path.query) {
-            params.queryParams = path.query;
-          }
-          fullPath = this._recognizer.generate(path.name, params);
-        } else if (path.path) {
-          fullPath = path.path;
-          if (path.query) {
-            var query = this._recognizer.generateQueryString(path.query);
-            if (fullPath.indexOf('?') > -1) {
-              fullPath += '&' + query.slice(1);
-            } else {
-              fullPath += query;
-            }
-          }
-        }
-      } else {
-        fullPath = path ? path + '' : '';
-      }
-      return encodeURI(fullPath);
-    };
-
     return Router;
   })();
 
@@ -5687,7 +5991,7 @@ function merge(target, source, deep) {
     /* istanbul ignore if */
     if (typeof comp !== 'function') {
       handler.component = null;
-      warn('invalid component for route "' + path + '".');
+      warn$1('invalid component for route "' + path + '".');
     }
   }
 
@@ -5703,7 +6007,7 @@ function merge(target, source, deep) {
   Router.install = function (externalVue) {
     /* istanbul ignore if */
     if (Router.installed) {
-      warn('already installed.');
+      warn$1('already installed.');
       return;
     }
     Vue = externalVue;
@@ -5723,10 +6027,10 @@ function merge(target, source, deep) {
   return Router;
 
 }));
-},{}],87:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 (function (process,global){
 /*!
- * Vue.js v1.0.20
+ * Vue.js v1.0.23
  * (c) 2016 Evan You
  * Released under the MIT License.
  */
@@ -5773,6 +6077,10 @@ function del(obj, key) {
   delete obj[key];
   var ob = obj.__ob__;
   if (!ob) {
+    if (obj._isVue) {
+      delete obj._data[key];
+      obj._digest();
+    }
     return;
   }
   ob.dep.notify();
@@ -6123,6 +6431,8 @@ var devtools = inBrowser && window.__VUE_DEVTOOLS_GLOBAL_HOOK__;
 var UA = inBrowser && window.navigator.userAgent.toLowerCase();
 var isIE9 = UA && UA.indexOf('msie 9.0') > 0;
 var isAndroid = UA && UA.indexOf('android') > 0;
+var isIos = UA && /(iphone|ipad|ipod|ios)/i.test(UA);
+var isWechat = UA && UA.indexOf('micromessenger') > 0;
 
 var transitionProp = undefined;
 var transitionEndEvent = undefined;
@@ -6163,7 +6473,7 @@ var nextTick = (function () {
   }
 
   /* istanbul ignore if */
-  if (typeof MutationObserver !== 'undefined') {
+  if (typeof MutationObserver !== 'undefined' && !(isWechat && isIos)) {
     var counter = 1;
     var observer = new MutationObserver(nextTickHandler);
     var textNode = document.createTextNode(counter);
@@ -6191,6 +6501,27 @@ var nextTick = (function () {
     timerFunc(nextTickHandler, 0);
   };
 })();
+
+var _Set = undefined;
+/* istanbul ignore if */
+if (typeof Set !== 'undefined' && Set.toString().match(/native code/)) {
+  // use native Set when available.
+  _Set = Set;
+} else {
+  // a non-standard Set polyfill that only works with primitive keys.
+  _Set = function () {
+    this.set = Object.create(null);
+  };
+  _Set.prototype.has = function (key) {
+    return this.set[key] !== undefined;
+  };
+  _Set.prototype.add = function (key) {
+    this.set[key] = 1;
+  };
+  _Set.prototype.clear = function () {
+    this.set = Object.create(null);
+  };
+}
 
 function Cache(limit) {
   this.size = 0;
@@ -6463,7 +6794,7 @@ function compileRegex() {
   var close = escapeRegex(config.delimiters[1]);
   var unsafeOpen = escapeRegex(config.unsafeDelimiters[0]);
   var unsafeClose = escapeRegex(config.unsafeDelimiters[1]);
-  tagRE = new RegExp(unsafeOpen + '(.+?)' + unsafeClose + '|' + open + '(.+?)' + close, 'g');
+  tagRE = new RegExp(unsafeOpen + '((?:.|\\n)+?)' + unsafeClose + '|' + open + '((?:.|\\n)+?)' + close, 'g');
   htmlRE = new RegExp('^' + unsafeOpen + '.*' + unsafeClose + '$');
   // reset cache
   cache = new Cache(1000);
@@ -6488,7 +6819,6 @@ function parseText(text) {
   if (hit) {
     return hit;
   }
-  text = text.replace(/\n/g, '');
   if (!tagRE.test(text)) {
     return null;
   }
@@ -6704,22 +7034,21 @@ var config = Object.defineProperties({
 });
 
 var warn = undefined;
+var formatComponentName = undefined;
 
 if (process.env.NODE_ENV !== 'production') {
   (function () {
     var hasConsole = typeof console !== 'undefined';
-    warn = function (msg, e) {
-      if (hasConsole && (!config.silent || config.debug)) {
-        console.warn('[Vue warn]: ' + msg);
-        /* istanbul ignore if */
-        if (config.debug) {
-          if (e) {
-            throw e;
-          } else {
-            console.warn(new Error('Warning Stack Trace').stack);
-          }
-        }
+
+    warn = function (msg, vm) {
+      if (hasConsole && !config.silent) {
+        console.error('[Vue warn]: ' + msg + (vm ? formatComponentName(vm) : ''));
       }
+    };
+
+    formatComponentName = function (vm) {
+      var name = vm._isVue ? vm.$options.name : vm.name;
+      return name ? ' (found in component: <' + hyphenate(name) + '>)' : '';
     };
   })();
 }
@@ -6837,10 +7166,22 @@ function query(el) {
  * @return {Boolean}
  */
 
-function inDoc(node) {
-  var doc = document.documentElement;
+function inDoc(node, win) {
+  win = win || window;
+  var doc = win.document.documentElement;
   var parent = node && node.parentNode;
-  return doc === node || doc === parent || !!(parent && parent.nodeType === 1 && doc.contains(parent));
+  var isInDoc = doc === node || doc === parent || !!(parent && parent.nodeType === 1 && doc.contains(parent));
+  if (!isInDoc) {
+    var frames = win.frames;
+    if (frames) {
+      for (var i = 0; i < frames.length; i++) {
+        if (inDoc(node, frames[i])) {
+          return true;
+        }
+      }
+    }
+  }
+  return isInDoc;
 }
 
 /**
@@ -7274,7 +7615,7 @@ function checkComponentAttr(el, options) {
     if (resolveAsset(options, 'components', tag)) {
       return { id: tag };
     } else {
-      var is = hasAttrs && getIsBinding(el);
+      var is = hasAttrs && getIsBinding(el, options);
       if (is) {
         return is;
       } else if (process.env.NODE_ENV !== 'production') {
@@ -7287,7 +7628,7 @@ function checkComponentAttr(el, options) {
       }
     }
   } else if (hasAttrs) {
-    return getIsBinding(el);
+    return getIsBinding(el, options);
   }
 }
 
@@ -7295,14 +7636,18 @@ function checkComponentAttr(el, options) {
  * Get "is" binding from an element.
  *
  * @param {Element} el
+ * @param {Object} options
  * @return {Object|undefined}
  */
 
-function getIsBinding(el) {
+function getIsBinding(el, options) {
   // dynamic syntax
-  var exp = getAttr(el, 'is');
+  var exp = el.getAttribute('is');
   if (exp != null) {
-    return { id: exp };
+    if (resolveAsset(options, 'components', exp)) {
+      el.removeAttribute('is');
+      return { id: exp };
+    }
   } else {
     exp = getBindAttr(el, 'is');
     if (exp != null) {
@@ -7354,7 +7699,7 @@ strats.data = function (parentVal, childVal, vm) {
       return parentVal;
     }
     if (typeof childVal !== 'function') {
-      process.env.NODE_ENV !== 'production' && warn('The "data" option should be a function ' + 'that returns a per-instance value in component ' + 'definitions.');
+      process.env.NODE_ENV !== 'production' && warn('The "data" option should be a function ' + 'that returns a per-instance value in component ' + 'definitions.', vm);
       return parentVal;
     }
     if (!parentVal) {
@@ -7388,7 +7733,7 @@ strats.data = function (parentVal, childVal, vm) {
 
 strats.el = function (parentVal, childVal, vm) {
   if (!vm && childVal && typeof childVal !== 'function') {
-    process.env.NODE_ENV !== 'production' && warn('The "el" option should be a function ' + 'that returns a per-instance value in component ' + 'definitions.');
+    process.env.NODE_ENV !== 'production' && warn('The "el" option should be a function ' + 'that returns a per-instance value in component ' + 'definitions.', vm);
     return;
   }
   var ret = childVal || parentVal;
@@ -7405,15 +7750,6 @@ strats.init = strats.created = strats.ready = strats.attached = strats.detached 
 };
 
 /**
- * 0.11 deprecation warning
- */
-
-strats.paramAttributes = function () {
-  /* istanbul ignore next */
-  process.env.NODE_ENV !== 'production' && warn('"paramAttributes" option has been deprecated in 0.12. ' + 'Use "props" instead.');
-};
-
-/**
  * Assets
  *
  * When a vm is present (instance creation), we need to do
@@ -7422,7 +7758,7 @@ strats.paramAttributes = function () {
  */
 
 function mergeAssets(parentVal, childVal) {
-  var res = Object.create(parentVal);
+  var res = Object.create(parentVal || null);
   return childVal ? extend(res, guardArrayAssets(childVal)) : res;
 }
 
@@ -7581,8 +7917,16 @@ function guardArrayAssets(assets) {
 function mergeOptions(parent, child, vm) {
   guardComponents(child);
   guardProps(child);
+  if (process.env.NODE_ENV !== 'production') {
+    if (child.propsData && !vm) {
+      warn('propsData can only be used as an instantiation option.');
+    }
+  }
   var options = {};
   var key;
+  if (child['extends']) {
+    parent = typeof child['extends'] === 'function' ? mergeOptions(parent, child['extends'].options, vm) : mergeOptions(parent, child['extends'], vm);
+  }
   if (child.mixins) {
     for (var i = 0, l = child.mixins.length; i < l; i++) {
       parent = mergeOptions(parent, child.mixins[i], vm);
@@ -7611,31 +7955,26 @@ function mergeOptions(parent, child, vm) {
  * @param {Object} options
  * @param {String} type
  * @param {String} id
+ * @param {Boolean} warnMissing
  * @return {Object|Function}
  */
 
-function resolveAsset(options, type, id) {
+function resolveAsset(options, type, id, warnMissing) {
   /* istanbul ignore if */
   if (typeof id !== 'string') {
     return;
   }
   var assets = options[type];
   var camelizedId;
-  return assets[id] ||
+  var res = assets[id] ||
   // camelCase ID
   assets[camelizedId = camelize(id)] ||
   // Pascal Case ID
   assets[camelizedId.charAt(0).toUpperCase() + camelizedId.slice(1)];
-}
-
-/**
- * Assert asset exists
- */
-
-function assertAsset(val, type, id) {
-  if (!val) {
-    process.env.NODE_ENV !== 'production' && warn('Failed to resolve ' + type + ': ' + id);
+  if (process.env.NODE_ENV !== 'production' && warnMissing && !res) {
+    warn('Failed to resolve ' + type.slice(0, -1) + ': ' + id, options);
   }
+  return res;
 }
 
 var uid$1 = 0;
@@ -7752,10 +8091,9 @@ def(arrayProto, '$set', function $set(index, val) {
 });
 
 /**
- * Convenience method to remove the element at given index.
+ * Convenience method to remove the element at given index or target element reference.
  *
- * @param {Number} index
- * @param {*} val
+ * @param {*} item
  */
 
 def(arrayProto, '$remove', function $remove(item) {
@@ -8021,11 +8359,14 @@ var util = Object.freeze({
 	devtools: devtools,
 	isIE9: isIE9,
 	isAndroid: isAndroid,
+	isIos: isIos,
+	isWechat: isWechat,
 	get transitionProp () { return transitionProp; },
 	get transitionEndEvent () { return transitionEndEvent; },
 	get animationProp () { return animationProp; },
 	get animationEndEvent () { return animationEndEvent; },
 	nextTick: nextTick,
+	get _Set () { return _Set; },
 	query: query,
 	inDoc: inDoc,
 	getAttr: getAttr,
@@ -8052,7 +8393,6 @@ var util = Object.freeze({
 	getOuterHTML: getOuterHTML,
 	mergeOptions: mergeOptions,
 	resolveAsset: resolveAsset,
-	assertAsset: assertAsset,
 	checkComponentAttr: checkComponentAttr,
 	commonTagRE: commonTagRE,
 	reservedTagRE: reservedTagRE,
@@ -8139,13 +8479,8 @@ function initMixin (Vue) {
     this._updateRef();
 
     // initialize data as empty object.
-    // it will be filled up in _initScope().
+    // it will be filled up in _initData().
     this._data = {};
-
-    // save raw constructor data before merge
-    // so that we know which properties are provided at
-    // instantiation.
-    this._runtimeData = options.data;
 
     // call init hook
     this._callHook('init');
@@ -8439,8 +8774,8 @@ function getPath(obj, path) {
 
 var warnNonExistent;
 if (process.env.NODE_ENV !== 'production') {
-  warnNonExistent = function (path) {
-    warn('You are setting a non-existent path "' + path.raw + '" ' + 'on a vm instance. Consider pre-initializing the property ' + 'with the "data" option for more reliable reactivity ' + 'and better performance.');
+  warnNonExistent = function (path, vm) {
+    warn('You are setting a non-existent path "' + path.raw + '" ' + 'on a vm instance. Consider pre-initializing the property ' + 'with the "data" option for more reliable reactivity ' + 'and better performance.', vm);
   };
 }
 
@@ -8472,7 +8807,7 @@ function setPath(obj, path, val) {
       if (!isObject(obj)) {
         obj = {};
         if (process.env.NODE_ENV !== 'production' && last._isVue) {
-          warnNonExistent(path);
+          warnNonExistent(path, last);
         }
         set(last, key, obj);
       }
@@ -8483,7 +8818,7 @@ function setPath(obj, path, val) {
         obj[key] = val;
       } else {
         if (process.env.NODE_ENV !== 'production' && obj._isVue) {
-          warnNonExistent(path);
+          warnNonExistent(path, obj);
         }
         set(obj, key, val);
       }
@@ -8696,24 +9031,22 @@ var expression = Object.freeze({
 // triggered, the DOM would have already been in updated
 // state.
 
-var queueIndex;
 var queue = [];
 var userQueue = [];
 var has = {};
 var circular = {};
 var waiting = false;
-var internalQueueDepleted = false;
 
 /**
  * Reset the batcher's state.
  */
 
 function resetBatcherState() {
-  queue = [];
-  userQueue = [];
+  queue.length = 0;
+  userQueue.length = 0;
   has = {};
   circular = {};
-  waiting = internalQueueDepleted = false;
+  waiting = false;
 }
 
 /**
@@ -8721,15 +9054,26 @@ function resetBatcherState() {
  */
 
 function flushBatcherQueue() {
-  runBatcherQueue(queue);
-  internalQueueDepleted = true;
-  runBatcherQueue(userQueue);
-  // dev tool hook
-  /* istanbul ignore if */
-  if (devtools && config.devtools) {
-    devtools.emit('flush');
+  var _again = true;
+
+  _function: while (_again) {
+    _again = false;
+
+    runBatcherQueue(queue);
+    runBatcherQueue(userQueue);
+    // user watchers triggered more watchers,
+    // keep flushing until it depletes
+    if (queue.length) {
+      _again = true;
+      continue _function;
+    }
+    // dev tool hook
+    /* istanbul ignore if */
+    if (devtools && config.devtools) {
+      devtools.emit('flush');
+    }
+    resetBatcherState();
   }
-  resetBatcherState();
 }
 
 /**
@@ -8741,8 +9085,8 @@ function flushBatcherQueue() {
 function runBatcherQueue(queue) {
   // do not cache length because more watchers might be pushed
   // as we run existing watchers
-  for (queueIndex = 0; queueIndex < queue.length; queueIndex++) {
-    var watcher = queue[queueIndex];
+  for (var i = 0; i < queue.length; i++) {
+    var watcher = queue[i];
     var id = watcher.id;
     has[id] = null;
     watcher.run();
@@ -8750,11 +9094,12 @@ function runBatcherQueue(queue) {
     if (process.env.NODE_ENV !== 'production' && has[id] != null) {
       circular[id] = (circular[id] || 0) + 1;
       if (circular[id] > config._maxUpdateCount) {
-        queue.splice(has[id], 1);
-        warn('You may have an infinite update loop for watcher ' + 'with expression: ' + watcher.expression);
+        warn('You may have an infinite update loop for watcher ' + 'with expression "' + watcher.expression + '"', watcher.vm);
+        break;
       }
     }
   }
+  queue.length = 0;
 }
 
 /**
@@ -8771,20 +9116,14 @@ function runBatcherQueue(queue) {
 function pushWatcher(watcher) {
   var id = watcher.id;
   if (has[id] == null) {
-    if (internalQueueDepleted && !watcher.user) {
-      // an internal watcher triggered by a user watcher...
-      // let's run it immediately after current user watcher is done.
-      userQueue.splice(queueIndex + 1, 0, watcher);
-    } else {
-      // push watcher into appropriate queue
-      var q = watcher.user ? userQueue : queue;
-      has[id] = q.length;
-      q.push(watcher);
-      // queue the flush
-      if (!waiting) {
-        waiting = true;
-        nextTick(flushBatcherQueue);
-      }
+    // push watcher into appropriate queue
+    var q = watcher.user ? userQueue : queue;
+    has[id] = q.length;
+    q.push(watcher);
+    // queue the flush
+    if (!waiting) {
+      waiting = true;
+      nextTick(flushBatcherQueue);
     }
   }
 }
@@ -8825,8 +9164,8 @@ function Watcher(vm, expOrFn, cb, options) {
   this.dirty = this.lazy; // for lazy watchers
   this.deps = [];
   this.newDeps = [];
-  this.depIds = Object.create(null);
-  this.newDepIds = null;
+  this.depIds = new _Set();
+  this.newDepIds = new _Set();
   this.prevError = null; // for async error stacks
   // parse expression for getter/setter
   if (isFn) {
@@ -8855,7 +9194,7 @@ Watcher.prototype.get = function () {
     value = this.getter.call(scope, scope);
   } catch (e) {
     if (process.env.NODE_ENV !== 'production' && config.warnExpressionErrors) {
-      warn('Error when evaluating expression "' + this.expression + '". ' + (config.debug ? '' : 'Turn on debug mode to see stack trace.'), e);
+      warn('Error when evaluating expression ' + '"' + this.expression + '": ' + e.toString(), this.vm);
     }
   }
   // "touch" every property so they are all tracked as
@@ -8891,14 +9230,14 @@ Watcher.prototype.set = function (value) {
     this.setter.call(scope, scope, value);
   } catch (e) {
     if (process.env.NODE_ENV !== 'production' && config.warnExpressionErrors) {
-      warn('Error when evaluating setter "' + this.expression + '"', e);
+      warn('Error when evaluating setter ' + '"' + this.expression + '": ' + e.toString(), this.vm);
     }
   }
   // two-way sync for v-for alias
   var forContext = scope.$forContext;
   if (forContext && forContext.alias === this.expression) {
     if (forContext.filters) {
-      process.env.NODE_ENV !== 'production' && warn('It seems you are using two-way binding on ' + 'a v-for alias (' + this.expression + '), and the ' + 'v-for has filters. This will not work properly. ' + 'Either remove the filters or use an array of ' + 'objects and bind to object properties instead.');
+      process.env.NODE_ENV !== 'production' && warn('It seems you are using two-way binding on ' + 'a v-for alias (' + this.expression + '), and the ' + 'v-for has filters. This will not work properly. ' + 'Either remove the filters or use an array of ' + 'objects and bind to object properties instead.', this.vm);
       return;
     }
     forContext._withLock(function () {
@@ -8918,8 +9257,6 @@ Watcher.prototype.set = function (value) {
 
 Watcher.prototype.beforeGet = function () {
   Dep.target = this;
-  this.newDepIds = Object.create(null);
-  this.newDeps.length = 0;
 };
 
 /**
@@ -8930,10 +9267,10 @@ Watcher.prototype.beforeGet = function () {
 
 Watcher.prototype.addDep = function (dep) {
   var id = dep.id;
-  if (!this.newDepIds[id]) {
-    this.newDepIds[id] = true;
+  if (!this.newDepIds.has(id)) {
+    this.newDepIds.add(id);
     this.newDeps.push(dep);
-    if (!this.depIds[id]) {
+    if (!this.depIds.has(id)) {
       dep.addSub(this);
     }
   }
@@ -8948,14 +9285,18 @@ Watcher.prototype.afterGet = function () {
   var i = this.deps.length;
   while (i--) {
     var dep = this.deps[i];
-    if (!this.newDepIds[dep.id]) {
+    if (!this.newDepIds.has(dep.id)) {
       dep.removeSub(this);
     }
   }
+  var tmp = this.depIds;
   this.depIds = this.newDepIds;
-  var tmp = this.deps;
+  this.newDepIds = tmp;
+  this.newDepIds.clear();
+  tmp = this.deps;
   this.deps = this.newDeps;
   this.newDeps = tmp;
+  this.newDeps.length = 0;
 };
 
 /**
@@ -9079,15 +9420,33 @@ Watcher.prototype.teardown = function () {
  * @param {*} val
  */
 
-function traverse(val) {
-  var i, keys;
-  if (isArray(val)) {
-    i = val.length;
-    while (i--) traverse(val[i]);
-  } else if (isObject(val)) {
-    keys = Object.keys(val);
-    i = keys.length;
-    while (i--) traverse(val[keys[i]]);
+var seenObjects = new _Set();
+function traverse(val, seen) {
+  var i = undefined,
+      keys = undefined;
+  if (!seen) {
+    seen = seenObjects;
+    seen.clear();
+  }
+  var isA = isArray(val);
+  var isO = isObject(val);
+  if (isA || isO) {
+    if (val.__ob__) {
+      var depId = val.__ob__.dep.id;
+      if (seen.has(depId)) {
+        return;
+      } else {
+        seen.add(depId);
+      }
+    }
+    if (isA) {
+      i = val.length;
+      while (i--) traverse(val[i], seen);
+    } else if (isO) {
+      keys = Object.keys(val);
+      i = keys.length;
+      while (i--) traverse(val[keys[i]], seen);
+    }
   }
 }
 
@@ -9196,10 +9555,13 @@ function stringToFragment(templateString, raw) {
 
 function nodeToFragment(node) {
   // if its a template tag and the browser supports it,
-  // its content is already a document fragment.
+  // its content is already a document fragment. However, iOS Safari has
+  // bug when using directly cloned template content with touch
+  // events and can cause crashes when the nodes are removed from DOM, so we
+  // have to treat template elements as string templates. (#2805)
+  /* istanbul ignore if */
   if (isRealTemplate(node)) {
-    trimNode(node.content);
-    return node.content;
+    return stringToFragment(node.innerHTML);
   }
   // script template
   if (node.tagName === 'SCRIPT') {
@@ -9595,7 +9957,7 @@ function FragmentFactory(vm, el) {
   this.vm = vm;
   var template;
   var isString = typeof el === 'string';
-  if (isString || isTemplate(el)) {
+  if (isString || isTemplate(el) && !el.hasAttribute('v-if')) {
     template = parseTemplate(el, true);
   } else {
     template = document.createDocumentFragment();
@@ -9638,9 +10000,9 @@ var TRANSITION = 1100;
 var EL = 1500;
 var COMPONENT = 1500;
 var PARTIAL = 1750;
-var FOR = 2000;
-var IF = 2000;
-var SLOT = 2100;
+var IF = 2100;
+var FOR = 2200;
+var SLOT = 2300;
 
 var uid$3 = 0;
 
@@ -9666,7 +10028,7 @@ var vFor = {
     }
 
     if (!this.alias) {
-      process.env.NODE_ENV !== 'production' && warn('Alias is required in v-for.');
+      process.env.NODE_ENV !== 'production' && warn('Invalid v-for expression "' + this.descriptor.raw + '": ' + 'alias is required.', this.vm);
       return;
     }
 
@@ -9937,7 +10299,15 @@ var vFor = {
       });
       setTimeout(op, staggerAmount);
     } else {
-      frag.before(prevEl.nextSibling);
+      var target = prevEl.nextSibling;
+      /* istanbul ignore if */
+      if (!target) {
+        // reset end anchor position in case the position was messed up
+        // by an external drag-n-drop library.
+        after(this.end, prevEl);
+        target = this.end;
+      }
+      frag.before(target);
     }
   },
 
@@ -10008,7 +10378,7 @@ var vFor = {
     var primitive = !isObject(value);
     var id;
     if (key || trackByKey || primitive) {
-      id = trackByKey ? trackByKey === '$index' ? index : value[trackByKey] : key || value;
+      id = getTrackByKey(index, key, value, trackByKey);
       if (!cache[id]) {
         cache[id] = frag;
       } else if (trackByKey !== '$index') {
@@ -10022,8 +10392,10 @@ var vFor = {
         } else {
           process.env.NODE_ENV !== 'production' && this.warnDuplicate(value);
         }
-      } else {
+      } else if (Object.isExtensible(value)) {
         def(value, id, frag);
+      } else if (process.env.NODE_ENV !== 'production') {
+        warn('Frozen v-for objects cannot be automatically tracked, make sure to ' + 'provide a track-by key.');
       }
     }
     frag.raw = value;
@@ -10043,7 +10415,7 @@ var vFor = {
     var primitive = !isObject(value);
     var frag;
     if (key || trackByKey || primitive) {
-      var id = trackByKey ? trackByKey === '$index' ? index : value[trackByKey] : key || value;
+      var id = getTrackByKey(index, key, value, trackByKey);
       frag = this.cache[id];
     } else {
       frag = value[this.id];
@@ -10070,7 +10442,7 @@ var vFor = {
     var key = hasOwn(scope, '$key') && scope.$key;
     var primitive = !isObject(value);
     if (trackByKey || key || primitive) {
-      var id = trackByKey ? trackByKey === '$index' ? index : value[trackByKey] : key || value;
+      var id = getTrackByKey(index, key, value, trackByKey);
       this.cache[id] = null;
     } else {
       value[this.id] = null;
@@ -10220,9 +10592,22 @@ function range(n) {
   return ret;
 }
 
+/**
+ * Get the track by key for an item.
+ *
+ * @param {Number} index
+ * @param {String} key
+ * @param {*} value
+ * @param {String} [trackByKey]
+ */
+
+function getTrackByKey(index, key, value, trackByKey) {
+  return trackByKey ? trackByKey === '$index' ? index : trackByKey.charAt(0).match(/\w/) ? getPath(value, trackByKey) : value[trackByKey] : key || value;
+}
+
 if (process.env.NODE_ENV !== 'production') {
   vFor.warnDuplicate = function (value) {
-    warn('Duplicate value found in v-for="' + this.descriptor.raw + '": ' + JSON.stringify(value) + '. Use track-by="$index" if ' + 'you are expecting duplicate values.');
+    warn('Duplicate value found in v-for="' + this.descriptor.raw + '": ' + JSON.stringify(value) + '. Use track-by="$index" if ' + 'you are expecting duplicate values.', this.vm);
   };
 }
 
@@ -10244,7 +10629,7 @@ var vIf = {
       this.anchor = createAnchor('v-if');
       replace(el, this.anchor);
     } else {
-      process.env.NODE_ENV !== 'production' && warn('v-if="' + this.expression + '" cannot be ' + 'used on an instance root element.');
+      process.env.NODE_ENV !== 'production' && warn('v-if="' + this.expression + '" cannot be ' + 'used on an instance root element.', this.vm);
       this.invalid = true;
     }
   },
@@ -10677,7 +11062,7 @@ var model = {
     // friendly warning...
     this.checkFilters();
     if (this.hasRead && !this.hasWrite) {
-      process.env.NODE_ENV !== 'production' && warn('It seems you are using a read-only filter with ' + 'v-model. You might want to use a two-way filter ' + 'to ensure correct behavior.');
+      process.env.NODE_ENV !== 'production' && warn('It seems you are using a read-only filter with ' + 'v-model="' + this.descriptor.raw + '". ' + 'You might want to use a two-way filter to ensure correct behavior.', this.vm);
     }
     var el = this.el;
     var tag = el.tagName;
@@ -10689,7 +11074,7 @@ var model = {
     } else if (tag === 'TEXTAREA') {
       handler = handlers.text;
     } else {
-      process.env.NODE_ENV !== 'production' && warn('v-model does not support element type: ' + tag);
+      process.env.NODE_ENV !== 'production' && warn('v-model does not support element type: ' + tag, this.vm);
       return;
     }
     el.__v_model = this;
@@ -10805,7 +11190,7 @@ var on$1 = {
     }
 
     if (typeof handler !== 'function') {
-      process.env.NODE_ENV !== 'production' && warn('v-on:' + this.arg + '="' + this.expression + '" expects a function value, ' + 'got ' + handler);
+      process.env.NODE_ENV !== 'production' && warn('v-on:' + this.arg + '="' + this.expression + '" expects a function value, ' + 'got ' + handler, this.vm);
       return;
     }
 
@@ -10821,7 +11206,7 @@ var on$1 = {
     }
     // key filter
     var keys = Object.keys(this.modifiers).filter(function (key) {
-      return key !== 'stop' && key !== 'prevent' && key !== 'self';
+      return key !== 'stop' && key !== 'prevent' && key !== 'self' && key !== 'capture';
     });
     if (keys.length) {
       handler = keyFilter(handler, keys);
@@ -10898,11 +11283,17 @@ var style = {
     if (value) {
       var isImportant = importantRE.test(value) ? 'important' : '';
       if (isImportant) {
+        /* istanbul ignore if */
+        if (process.env.NODE_ENV !== 'production') {
+          warn('It\'s probably a bad idea to use !important with inline rules. ' + 'This feature will be deprecated in a future version of Vue.');
+        }
         value = value.replace(importantRE, '').trim();
+        this.el.style.setProperty(prop.kebab, value, isImportant);
+      } else {
+        this.el.style[prop.camel] = value;
       }
-      this.el.style.setProperty(prop, value, isImportant);
     } else {
-      this.el.style.removeProperty(prop);
+      this.el.style[prop.camel] = '';
     }
   }
 
@@ -10944,14 +11335,20 @@ function prefix(prop) {
   }
   var i = prefixes.length;
   var prefixed;
+  if (camel !== 'filter' && camel in testEl.style) {
+    return {
+      kebab: prop,
+      camel: camel
+    };
+  }
   while (i--) {
     prefixed = camelPrefixes[i] + upper;
     if (prefixed in testEl.style) {
-      return prefixes[i] + prop;
+      return {
+        kebab: prefixes[i] + prop,
+        camel: prefixed
+      };
     }
-  }
-  if (camel in testEl.style) {
-    return prop;
   }
 }
 
@@ -10998,7 +11395,7 @@ var bind$1 = {
 
       // only allow binding on native attributes
       if (disallowedInterpAttrRE.test(attr) || attr === 'name' && (tag === 'PARTIAL' || tag === 'SLOT')) {
-        process.env.NODE_ENV !== 'production' && warn(attr + '="' + descriptor.raw + '": ' + 'attribute interpolation is not allowed in Vue.js ' + 'directives and special attributes.');
+        process.env.NODE_ENV !== 'production' && warn(attr + '="' + descriptor.raw + '": ' + 'attribute interpolation is not allowed in Vue.js ' + 'directives and special attributes.', this.vm);
         this.el.removeAttribute(attr);
         this.invalid = true;
       }
@@ -11008,12 +11405,12 @@ var bind$1 = {
         var raw = attr + '="' + descriptor.raw + '": ';
         // warn src
         if (attr === 'src') {
-          warn(raw + 'interpolation in "src" attribute will cause ' + 'a 404 request. Use v-bind:src instead.');
+          warn(raw + 'interpolation in "src" attribute will cause ' + 'a 404 request. Use v-bind:src instead.', this.vm);
         }
 
         // warn style
         if (attr === 'style') {
-          warn(raw + 'interpolation in "style" attribute will cause ' + 'the attribute to be discarded in Internet Explorer. ' + 'Use v-bind:style instead.');
+          warn(raw + 'interpolation in "style" attribute will cause ' + 'the attribute to be discarded in Internet Explorer. ' + 'Use v-bind:style instead.', this.vm);
         }
       }
     }
@@ -11041,8 +11438,12 @@ var bind$1 = {
       attr = camelize(attr);
     }
     if (!interp && attrWithPropsRE.test(attr) && attr in el) {
-      el[attr] = attr === 'value' ? value == null // IE9 will set input.value to "null" for null...
+      var attrValue = attr === 'value' ? value == null // IE9 will set input.value to "null" for null...
       ? '' : value : value;
+
+      if (el[attr] !== attrValue) {
+        el[attr] = attrValue;
+      }
     }
     // set model props
     var modelProp = modelProps[attr];
@@ -11109,7 +11510,7 @@ var el = {
 
 var ref = {
   bind: function bind() {
-    process.env.NODE_ENV !== 'production' && warn('v-ref:' + this.arg + ' must be used on a child ' + 'component. Found on <' + this.el.tagName.toLowerCase() + '>.');
+    process.env.NODE_ENV !== 'production' && warn('v-ref:' + this.arg + ' must be used on a child ' + 'component. Found on <' + this.el.tagName.toLowerCase() + '>.', this.vm);
   }
 };
 
@@ -11142,73 +11543,94 @@ var vClass = {
   deep: true,
 
   update: function update(value) {
-    if (value && typeof value === 'string') {
-      this.handleObject(stringToObject(value));
-    } else if (isPlainObject(value)) {
-      this.handleObject(value);
-    } else if (isArray(value)) {
-      this.handleArray(value);
-    } else {
+    if (!value) {
       this.cleanup();
+    } else if (typeof value === 'string') {
+      this.setClass(value.trim().split(/\s+/));
+    } else {
+      this.setClass(normalize$1(value));
     }
   },
 
-  handleObject: function handleObject(value) {
-    this.cleanup(value);
-    this.prevKeys = Object.keys(value);
-    setObjectClasses(this.el, value);
-  },
-
-  handleArray: function handleArray(value) {
+  setClass: function setClass(value) {
     this.cleanup(value);
     for (var i = 0, l = value.length; i < l; i++) {
       var val = value[i];
-      if (val && isPlainObject(val)) {
-        setObjectClasses(this.el, val);
-      } else if (val && typeof val === 'string') {
-        addClass(this.el, val);
+      if (val) {
+        apply(this.el, val, addClass);
       }
     }
-    this.prevKeys = value.slice();
+    this.prevKeys = value;
   },
 
   cleanup: function cleanup(value) {
-    if (this.prevKeys) {
-      var i = this.prevKeys.length;
-      while (i--) {
-        var key = this.prevKeys[i];
-        if (!key) continue;
-        if (isPlainObject(key)) {
-          var keys = Object.keys(key);
-          for (var k = 0; k < keys.length; k++) {
-            removeClass(this.el, keys[k]);
-          }
-        } else {
-          removeClass(this.el, key);
-        }
+    var prevKeys = this.prevKeys;
+    if (!prevKeys) return;
+    var i = prevKeys.length;
+    while (i--) {
+      var key = prevKeys[i];
+      if (!value || value.indexOf(key) < 0) {
+        apply(this.el, key, removeClass);
       }
     }
   }
 };
 
-function setObjectClasses(el, obj) {
-  var keys = Object.keys(obj);
-  for (var i = 0, l = keys.length; i < l; i++) {
-    var key = keys[i];
-    if (obj[key]) {
-      addClass(el, key);
+/**
+ * Normalize objects and arrays (potentially containing objects)
+ * into array of strings.
+ *
+ * @param {Object|Array<String|Object>} value
+ * @return {Array<String>}
+ */
+
+function normalize$1(value) {
+  var res = [];
+  if (isArray(value)) {
+    for (var i = 0, l = value.length; i < l; i++) {
+      var _key = value[i];
+      if (_key) {
+        if (typeof _key === 'string') {
+          res.push(_key);
+        } else {
+          for (var k in _key) {
+            if (_key[k]) res.push(k);
+          }
+        }
+      }
+    }
+  } else if (isObject(value)) {
+    for (var key in value) {
+      if (value[key]) res.push(key);
     }
   }
+  return res;
 }
 
-function stringToObject(value) {
-  var res = {};
-  var keys = value.trim().split(/\s+/);
-  var i = keys.length;
-  while (i--) {
-    res[keys[i]] = true;
+/**
+ * Add or remove a class/classes on an element
+ *
+ * @param {Element} el
+ * @param {String} key The class name. This may or may not
+ *                     contain a space character, in such a
+ *                     case we'll deal with multiple class
+ *                     names at once.
+ * @param {Function} fn
+ */
+
+function apply(el, key, fn) {
+  key = key.trim();
+  if (key.indexOf(' ') === -1) {
+    fn(el, key);
+    return;
   }
-  return res;
+  // The key contains one or more space characters.
+  // Since a class name doesn't accept such characters, we
+  // treat it as multiple classes.
+  var keys = key.split(/\s+/);
+  for (var i = 0, l = keys.length; i < l; i++) {
+    fn(el, keys[i]);
+  }
 }
 
 var component = {
@@ -11252,6 +11674,7 @@ var component = {
       // cached, when the component is used elsewhere this attribute
       // will remain at link time.
       this.el.removeAttribute('is');
+      this.el.removeAttribute(':is');
       // remove ref, same as above
       if (this.descriptor.ref) {
         this.el.removeAttribute('v-ref:' + hyphenate(this.descriptor.ref));
@@ -11426,7 +11849,7 @@ var component = {
       }
       /* istanbul ignore if */
       if (process.env.NODE_ENV !== 'production' && this.el.hasAttribute('transition') && child._isFragment) {
-        warn('Transitions will not work on a fragment instance. ' + 'Template: ' + child.$options.template);
+        warn('Transitions will not work on a fragment instance. ' + 'Template: ' + child.$options.template, child);
       }
       return child;
     }
@@ -11585,10 +12008,11 @@ var settablePathRE = /^[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*|\[[^\[\]]+\])*$/;
  *
  * @param {Element|DocumentFragment} el
  * @param {Array} propOptions
+ * @param {Vue} vm
  * @return {Function} propsLinkFn
  */
 
-function compileProps(el, propOptions) {
+function compileProps(el, propOptions, vm) {
   var props = [];
   var names = Object.keys(propOptions);
   var i = names.length;
@@ -11598,7 +12022,7 @@ function compileProps(el, propOptions) {
     options = propOptions[name] || empty;
 
     if (process.env.NODE_ENV !== 'production' && name === '$data') {
-      warn('Do not use $data as prop.');
+      warn('Do not use $data as prop.', vm);
       continue;
     }
 
@@ -11607,7 +12031,7 @@ function compileProps(el, propOptions) {
     // so we need to camelize the path here
     path = camelize(name);
     if (!identRE$1.test(path)) {
-      process.env.NODE_ENV !== 'production' && warn('Invalid prop key: "' + name + '". Prop keys ' + 'must be valid identifiers.');
+      process.env.NODE_ENV !== 'production' && warn('Invalid prop key: "' + name + '". Prop keys ' + 'must be valid identifiers.', vm);
       continue;
     }
 
@@ -11645,14 +12069,14 @@ function compileProps(el, propOptions) {
         // check non-settable path for two-way bindings
         if (process.env.NODE_ENV !== 'production' && prop.mode === propBindingModes.TWO_WAY && !settablePathRE.test(value)) {
           prop.mode = propBindingModes.ONE_WAY;
-          warn('Cannot bind two-way prop with non-settable ' + 'parent path: ' + value);
+          warn('Cannot bind two-way prop with non-settable ' + 'parent path: ' + value, vm);
         }
       }
       prop.parentPath = value;
 
       // warn required two-way
       if (process.env.NODE_ENV !== 'production' && options.twoWay && prop.mode !== propBindingModes.TWO_WAY) {
-        warn('Prop "' + name + '" expects a two-way binding type.');
+        warn('Prop "' + name + '" expects a two-way binding type.', vm);
       }
     } else if ((value = getAttr(el, attr)) !== null) {
       // has literal binding!
@@ -11662,10 +12086,10 @@ function compileProps(el, propOptions) {
       var lowerCaseName = path.toLowerCase();
       value = /[A-Z\-]/.test(name) && (el.getAttribute(lowerCaseName) || el.getAttribute(':' + lowerCaseName) || el.getAttribute('v-bind:' + lowerCaseName) || el.getAttribute(':' + lowerCaseName + '.once') || el.getAttribute('v-bind:' + lowerCaseName + '.once') || el.getAttribute(':' + lowerCaseName + '.sync') || el.getAttribute('v-bind:' + lowerCaseName + '.sync'));
       if (value) {
-        warn('Possible usage error for prop `' + lowerCaseName + '` - ' + 'did you mean `' + attr + '`? HTML is case-insensitive, remember to use ' + 'kebab-case for props in templates.');
+        warn('Possible usage error for prop `' + lowerCaseName + '` - ' + 'did you mean `' + attr + '`? HTML is case-insensitive, remember to use ' + 'kebab-case for props in templates.', vm);
       } else if (options.required) {
         // warn missing required
-        warn('Missing required prop: ' + name);
+        warn('Missing required prop: ' + name, vm);
       }
     }
     // push prop
@@ -11685,6 +12109,7 @@ function makePropsLinkFn(props) {
   return function propsLinkFn(vm, scope) {
     // store resolved props info
     vm._props = {};
+    var inlineProps = vm.$options.propsData;
     var i = props.length;
     var prop, path, options, value, raw;
     while (i--) {
@@ -11693,7 +12118,9 @@ function makePropsLinkFn(props) {
       path = prop.path;
       options = prop.options;
       vm._props[path] = prop;
-      if (raw === null) {
+      if (inlineProps && hasOwn(inlineProps, path)) {
+        initProp(vm, prop, inlineProps[path]);
+      }if (raw === null) {
         // initialize absent prop
         initProp(vm, prop, undefined);
       } else if (prop.dynamic) {
@@ -11733,6 +12160,37 @@ function makePropsLinkFn(props) {
 }
 
 /**
+ * Process a prop with a rawValue, applying necessary coersions,
+ * default values & assertions and call the given callback with
+ * processed value.
+ *
+ * @param {Vue} vm
+ * @param {Object} prop
+ * @param {*} rawValue
+ * @param {Function} fn
+ */
+
+function processPropValue(vm, prop, rawValue, fn) {
+  var isSimple = prop.dynamic && isSimplePath(prop.parentPath);
+  var value = rawValue;
+  if (value === undefined) {
+    value = getPropDefaultValue(vm, prop);
+  }
+  value = coerceProp(prop, value);
+  var coerced = value !== rawValue;
+  if (!assertProp(prop, value, vm)) {
+    value = undefined;
+  }
+  if (isSimple && !coerced) {
+    withoutConversion(function () {
+      fn(value);
+    });
+  } else {
+    fn(value);
+  }
+}
+
+/**
  * Set a prop's initial value on a vm and its data object.
  *
  * @param {Vue} vm
@@ -11741,26 +12199,36 @@ function makePropsLinkFn(props) {
  */
 
 function initProp(vm, prop, value) {
-  var key = prop.path;
-  value = coerceProp(prop, value);
-  if (value === undefined) {
-    value = getPropDefaultValue(vm, prop.options);
-  }
-  if (assertProp(prop, value)) {
-    defineReactive(vm, key, value);
-  }
+  processPropValue(vm, prop, value, function (value) {
+    defineReactive(vm, prop.path, value);
+  });
+}
+
+/**
+ * Update a prop's value on a vm.
+ *
+ * @param {Vue} vm
+ * @param {Object} prop
+ * @param {*} value
+ */
+
+function updateProp(vm, prop, value) {
+  processPropValue(vm, prop, value, function (value) {
+    vm[prop.path] = value;
+  });
 }
 
 /**
  * Get the default value of a prop.
  *
  * @param {Vue} vm
- * @param {Object} options
+ * @param {Object} prop
  * @return {*}
  */
 
-function getPropDefaultValue(vm, options) {
+function getPropDefaultValue(vm, prop) {
   // no default, return undefined
+  var options = prop.options;
   if (!hasOwn(options, 'default')) {
     // absent boolean value defaults to false
     return options.type === Boolean ? false : undefined;
@@ -11768,7 +12236,7 @@ function getPropDefaultValue(vm, options) {
   var def = options['default'];
   // warn against non-factory defaults for Object & Array
   if (isObject(def)) {
-    process.env.NODE_ENV !== 'production' && warn('Object/Array as default prop values will be shared ' + 'across multiple instances. Use a factory function ' + 'to return the default value instead.');
+    process.env.NODE_ENV !== 'production' && warn('Invalid default value for prop "' + prop.name + '": ' + 'Props with type Object/Array must use a factory function ' + 'to return the default value.', vm);
   }
   // call factory function for non-Function types
   return typeof def === 'function' && options.type !== Function ? def.call(vm) : def;
@@ -11779,9 +12247,10 @@ function getPropDefaultValue(vm, options) {
  *
  * @param {Object} prop
  * @param {*} value
+ * @param {Vue} vm
  */
 
-function assertProp(prop, value) {
+function assertProp(prop, value, vm) {
   if (!prop.options.required && ( // non-required
   prop.raw === null || // abscent
   value == null) // null or undefined
@@ -11790,39 +12259,28 @@ function assertProp(prop, value) {
     }
   var options = prop.options;
   var type = options.type;
-  var valid = true;
-  var expectedType;
+  var valid = !type;
+  var expectedTypes = [];
   if (type) {
-    if (type === String) {
-      expectedType = 'string';
-      valid = typeof value === expectedType;
-    } else if (type === Number) {
-      expectedType = 'number';
-      valid = typeof value === 'number';
-    } else if (type === Boolean) {
-      expectedType = 'boolean';
-      valid = typeof value === 'boolean';
-    } else if (type === Function) {
-      expectedType = 'function';
-      valid = typeof value === 'function';
-    } else if (type === Object) {
-      expectedType = 'object';
-      valid = isPlainObject(value);
-    } else if (type === Array) {
-      expectedType = 'array';
-      valid = isArray(value);
-    } else {
-      valid = value instanceof type;
+    if (!isArray(type)) {
+      type = [type];
+    }
+    for (var i = 0; i < type.length && !valid; i++) {
+      var assertedType = assertType(value, type[i]);
+      expectedTypes.push(assertedType.expectedType);
+      valid = assertedType.valid;
     }
   }
   if (!valid) {
-    process.env.NODE_ENV !== 'production' && warn('Invalid prop: type check failed for ' + prop.path + '="' + prop.raw + '".' + ' Expected ' + formatType(expectedType) + ', got ' + formatValue(value) + '.');
+    if (process.env.NODE_ENV !== 'production') {
+      warn('Invalid prop: type check failed for prop "' + prop.name + '".' + ' Expected ' + expectedTypes.map(formatType).join(', ') + ', got ' + formatValue(value) + '.', vm);
+    }
     return false;
   }
   var validator = options.validator;
   if (validator) {
     if (!validator(value)) {
-      process.env.NODE_ENV !== 'production' && warn('Invalid prop: custom validator check failed for ' + prop.path + '="' + prop.raw + '"');
+      process.env.NODE_ENV !== 'production' && warn('Invalid prop: custom validator check failed for prop "' + prop.name + '".', vm);
       return false;
     }
   }
@@ -11846,9 +12304,61 @@ function coerceProp(prop, value) {
   return coerce(value);
 }
 
-function formatType(val) {
-  return val ? val.charAt(0).toUpperCase() + val.slice(1) : 'custom type';
+/**
+ * Assert the type of a value
+ *
+ * @param {*} value
+ * @param {Function} type
+ * @return {Object}
+ */
+
+function assertType(value, type) {
+  var valid;
+  var expectedType;
+  if (type === String) {
+    expectedType = 'string';
+    valid = typeof value === expectedType;
+  } else if (type === Number) {
+    expectedType = 'number';
+    valid = typeof value === expectedType;
+  } else if (type === Boolean) {
+    expectedType = 'boolean';
+    valid = typeof value === expectedType;
+  } else if (type === Function) {
+    expectedType = 'function';
+    valid = typeof value === expectedType;
+  } else if (type === Object) {
+    expectedType = 'object';
+    valid = isPlainObject(value);
+  } else if (type === Array) {
+    expectedType = 'array';
+    valid = isArray(value);
+  } else {
+    valid = value instanceof type;
+  }
+  return {
+    valid: valid,
+    expectedType: expectedType
+  };
 }
+
+/**
+ * Format type for output
+ *
+ * @param {String} type
+ * @return {String}
+ */
+
+function formatType(type) {
+  return type ? type.charAt(0).toUpperCase() + type.slice(1) : 'custom type';
+}
+
+/**
+ * Format value
+ *
+ * @param {*} value
+ * @return {String}
+ */
 
 function formatValue(val) {
   return Object.prototype.toString.call(val).slice(8, -1);
@@ -11866,19 +12376,9 @@ var propDef = {
     var childKey = prop.path;
     var parentKey = prop.parentPath;
     var twoWay = prop.mode === bindingModes.TWO_WAY;
-    var isSimple = isSimplePath(parentKey);
 
     var parentWatcher = this.parentWatcher = new Watcher(parent, parentKey, function (val) {
-      val = coerceProp(prop, val);
-      if (assertProp(prop, val)) {
-        if (isSimple) {
-          withoutConversion(function () {
-            child[childKey] = val;
-          });
-        } else {
-          child[childKey] = val;
-        }
-      }
+      updateProp(child, prop, val);
     }, {
       twoWay: twoWay,
       filters: prop.filters,
@@ -11888,14 +12388,7 @@ var propDef = {
     });
 
     // set the child initial value.
-    var value = parentWatcher.value;
-    if (isSimple && value !== undefined) {
-      withoutConversion(function () {
-        initProp(child, prop, value);
-      });
-    } else {
-      initProp(child, prop, value);
-    }
+    initProp(child, prop, parentWatcher.value);
 
     // setup two-way binding
     if (twoWay) {
@@ -12015,7 +12508,7 @@ function Transition(el, id, hooks, vm) {
   /* istanbul ignore if */
   if (process.env.NODE_ENV !== 'production') {
     if (this.type && this.type !== TYPE_TRANSITION && this.type !== TYPE_ANIMATION) {
-      warn('invalid CSS transition type for transition="' + this.id + '": ' + this.type);
+      warn('invalid CSS transition type for transition="' + this.id + '": ' + this.type, vm);
     }
   }
   // bind
@@ -12388,7 +12881,7 @@ function compile(el, options, partial) {
   // link function for the node itself.
   var nodeLinkFn = partial || !options._asComponent ? compileNode(el, options) : null;
   // link function for the childNodes
-  var childLinkFn = !(nodeLinkFn && nodeLinkFn.terminal) && el.tagName !== 'SCRIPT' && el.hasChildNodes() ? compileNodeList(el.childNodes, options) : null;
+  var childLinkFn = !(nodeLinkFn && nodeLinkFn.terminal) && !isScript(el) && el.hasChildNodes() ? compileNodeList(el.childNodes, options) : null;
 
   /**
    * A composite linker function to be called on a already
@@ -12512,7 +13005,7 @@ function teardownDirs(vm, dirs, destroying) {
  */
 
 function compileAndLinkProps(vm, el, props, scope) {
-  var propsLinkFn = compileProps(el, props);
+  var propsLinkFn = compileProps(el, props, vm);
   var propDirs = linkAndCapture(function () {
     propsLinkFn(vm, scope);
   }, vm);
@@ -12571,7 +13064,7 @@ function compileRoot(el, options, contextOptions) {
     });
     if (names.length) {
       var plural = names.length > 1;
-      warn('Attribute' + (plural ? 's ' : ' ') + names.join(', ') + (plural ? ' are' : ' is') + ' ignored on component ' + '<' + options.el.tagName.toLowerCase() + '> because ' + 'the component is a fragment instance: ' + 'http://vuejs.org/guide/components.html#Fragment_Instance');
+      warn('Attribute' + (plural ? 's ' : ' ') + names.join(', ') + (plural ? ' are' : ' is') + ' ignored on component ' + '<' + options.el.tagName.toLowerCase() + '> because ' + 'the component is a fragment instance: ' + 'http://vuejs.org/guide/components.html#Fragment-Instance');
     }
   }
 
@@ -12608,7 +13101,7 @@ function compileRoot(el, options, contextOptions) {
 
 function compileNode(node, options) {
   var type = node.nodeType;
-  if (type === 1 && node.tagName !== 'SCRIPT') {
+  if (type === 1 && !isScript(node)) {
     return compileElement(node, options);
   } else if (type === 3 && node.data.trim()) {
     return compileTextNode(node, options);
@@ -12903,7 +13396,6 @@ function checkTerminalDirectives(el, attrs, options) {
   var attr, name, value, modifiers, matched, dirName, rawName, arg, def, termDef;
   for (var i = 0, j = attrs.length; i < j; i++) {
     attr = attrs[i];
-    modifiers = parseModifiers(attr.name);
     name = attr.name.replace(modifierRE, '');
     if (matched = name.match(dirAttrRE)) {
       def = resolveAsset(options, 'directives', matched[1]);
@@ -12911,6 +13403,7 @@ function checkTerminalDirectives(el, attrs, options) {
         if (!termDef || (def.priority || DEFAULT_TERMINAL_PRIORITY) > termDef.priority) {
           termDef = def;
           rawName = attr.name;
+          modifiers = parseModifiers(attr.name);
           value = attr.value;
           dirName = matched[1];
           arg = matched[2];
@@ -13003,7 +13496,7 @@ function compileDirectives(attrs, options) {
         if (name === 'class' && Array.prototype.some.call(attrs, function (attr) {
           return attr.name === ':class' || attr.name === 'v-bind:class';
         })) {
-          warn('class="' + rawValue + '": Do not mix mustache interpolation ' + 'and v-bind for "class" on the same element. Use one or the other.');
+          warn('class="' + rawValue + '": Do not mix mustache interpolation ' + 'and v-bind for "class" on the same element. Use one or the other.', options);
         }
       }
     } else
@@ -13041,12 +13534,7 @@ function compileDirectives(attrs, options) {
                 continue;
               }
 
-              dirDef = resolveAsset(options, 'directives', dirName);
-
-              if (process.env.NODE_ENV !== 'production') {
-                assertAsset(dirDef, 'directive', dirName);
-              }
-
+              dirDef = resolveAsset(options, 'directives', dirName, true);
               if (dirDef) {
                 pushDir(dirName, dirDef);
               }
@@ -13134,6 +13622,10 @@ function hasOneTime(tokens) {
   while (i--) {
     if (tokens[i].oneTime) return true;
   }
+}
+
+function isScript(el) {
+  return el.tagName === 'SCRIPT' && (!el.hasAttribute('type') || el.getAttribute('type') === 'text/javascript');
 }
 
 var specialCharRE = /[^\w\-:\.]/;
@@ -13265,8 +13757,8 @@ function mergeAttrs(from, to) {
     value = attrs[i].value;
     if (!to.hasAttribute(name) && !specialCharRE.test(name)) {
       to.setAttribute(name, value);
-    } else if (name === 'class' && !parseText(value)) {
-      value.trim().split(/\s+/).forEach(function (cls) {
+    } else if (name === 'class' && !parseText(value) && (value = value.trim())) {
+      value.split(/\s+/).forEach(function (cls) {
         addClass(to, cls);
       });
     }
@@ -13298,13 +13790,17 @@ function resolveSlots(vm, content) {
     }
     /* eslint-enable no-cond-assign */
     if (process.env.NODE_ENV !== 'production' && getBindAttr(el, 'slot')) {
-      warn('The "slot" attribute must be static.');
+      warn('The "slot" attribute must be static.', vm.$parent);
     }
   }
   for (name in contents) {
     contents[name] = extractFragment(contents[name], content);
   }
   if (content.hasChildNodes()) {
+    var nodes = content.childNodes;
+    if (nodes.length === 1 && nodes[0].nodeType === 3 && !nodes[0].data.trim()) {
+      return;
+    }
     contents['default'] = extractFragment(content.childNodes, content);
   }
 }
@@ -13323,7 +13819,7 @@ function extractFragment(nodes, parent) {
     var node = nodes[i];
     if (isTemplate(node) && !node.hasAttribute('v-if') && !node.hasAttribute('v-for')) {
       parent.removeChild(node);
-      node = parseTemplate(node);
+      node = parseTemplate(node, true);
     }
     frag.appendChild(node);
   }
@@ -13383,7 +13879,7 @@ function stateMixin (Vue) {
     var el = options.el;
     var props = options.props;
     if (props && !el) {
-      process.env.NODE_ENV !== 'production' && warn('Props will not be compiled if no `el` option is ' + 'provided at instantiation.');
+      process.env.NODE_ENV !== 'production' && warn('Props will not be compiled if no `el` option is ' + 'provided at instantiation.', this);
     }
     // make sure to convert string selectors into element now
     el = options.el = query(el);
@@ -13401,10 +13897,9 @@ function stateMixin (Vue) {
     var data = this._data = dataFn ? dataFn() : {};
     if (!isPlainObject(data)) {
       data = {};
-      process.env.NODE_ENV !== 'production' && warn('data functions should return an object.');
+      process.env.NODE_ENV !== 'production' && warn('data functions should return an object.', this);
     }
     var props = this._props;
-    var runtimeData = this._runtimeData ? typeof this._runtimeData === 'function' ? this._runtimeData() : this._runtimeData : null;
     // proxy data on instance
     var keys = Object.keys(data);
     var i, key;
@@ -13415,10 +13910,10 @@ function stateMixin (Vue) {
       // 1. it's not already defined as a prop
       // 2. it's provided via a instantiation option AND there are no
       //    template prop present
-      if (!props || !hasOwn(props, key) || runtimeData && hasOwn(runtimeData, key) && props[key].raw === null) {
+      if (!props || !hasOwn(props, key)) {
         this._proxy(key);
       } else if (process.env.NODE_ENV !== 'production') {
-        warn('Data field "' + key + '" is already defined ' + 'as a prop. Use prop default value instead.');
+        warn('Data field "' + key + '" is already defined ' + 'as a prop. To provide default value for a prop, use the "default" ' + 'prop option; if you want to pass prop values to an instantiation ' + 'call, use the "propsData" option.', this);
       }
     }
     // observe data
@@ -13608,18 +14103,21 @@ function eventsMixin (Vue) {
 
   function registerComponentEvents(vm, el) {
     var attrs = el.attributes;
-    var name, handler;
+    var name, value, handler;
     for (var i = 0, l = attrs.length; i < l; i++) {
       name = attrs[i].name;
       if (eventRE.test(name)) {
         name = name.replace(eventRE, '');
-        handler = (vm._scope || vm._context).$eval(attrs[i].value, true);
-        if (typeof handler === 'function') {
-          handler._fromParent = true;
-          vm.$on(name.replace(eventRE), handler);
-        } else if (process.env.NODE_ENV !== 'production') {
-          warn('v-on:' + name + '="' + attrs[i].value + '"' + (vm.$options.name ? ' on component <' + vm.$options.name + '>' : '') + ' expects a function value, got ' + handler);
+        // force the expression into a statement so that
+        // it always dynamically resolves the method to call (#2670)
+        // kinda ugly hack, but does the job.
+        value = attrs[i].value;
+        if (isSimplePath(value)) {
+          value += '.apply(this, $arguments)';
         }
+        handler = (vm._scope || vm._context).$eval(value, true);
+        handler._fromParent = true;
+        vm.$on(name.replace(eventRE), handler);
       }
     }
   }
@@ -13667,7 +14165,7 @@ function eventsMixin (Vue) {
       if (method) {
         vm[action](key, method, options);
       } else {
-        process.env.NODE_ENV !== 'production' && warn('Unknown method: "' + handler + '" when ' + 'registering callback for ' + action + ': "' + key + '".');
+        process.env.NODE_ENV !== 'production' && warn('Unknown method: "' + handler + '" when ' + 'registering callback for ' + action + ': "' + key + '".', vm);
       }
     } else if (handler && type === 'object') {
       register(vm, action, key, handler.handler, handler);
@@ -14270,7 +14768,7 @@ function lifecycleMixin (Vue) {
     }
     // remove reference from data ob
     // frozen object may not have observer.
-    if (this._data.__ob__) {
+    if (this._data && this._data.__ob__) {
       this._data.__ob__.removeVm(this);
     }
     // Clean up references to private properties and other
@@ -14308,10 +14806,7 @@ function miscMixin (Vue) {
     var filter, fn, args, arg, offset, i, l, j, k;
     for (i = 0, l = filters.length; i < l; i++) {
       filter = filters[write ? l - i - 1 : i];
-      fn = resolveAsset(this.$options, 'filters', filter.name);
-      if (process.env.NODE_ENV !== 'production') {
-        assertAsset(fn, 'filter', filter.name);
-      }
+      fn = resolveAsset(this.$options, 'filters', filter.name, true);
       if (!fn) continue;
       fn = write ? fn.write : fn.read || fn;
       if (typeof fn !== 'function') continue;
@@ -14344,11 +14839,9 @@ function miscMixin (Vue) {
     if (typeof value === 'function') {
       factory = value;
     } else {
-      factory = resolveAsset(this.$options, 'components', value);
-      if (process.env.NODE_ENV !== 'production') {
-        assertAsset(factory, 'component', value);
-      }
+      factory = resolveAsset(this.$options, 'components', value, true);
     }
+    /* istanbul ignore if */
     if (!factory) {
       return;
     }
@@ -14398,7 +14891,7 @@ function dataAPI (Vue) {
   Vue.prototype.$get = function (exp, asStatement) {
     var res = parseExpression(exp);
     if (res) {
-      if (asStatement && !isSimplePath(exp)) {
+      if (asStatement) {
         var self = this;
         return function statementHandler() {
           self.$arguments = toArray(arguments);
@@ -14949,7 +15442,7 @@ function lifecycleAPI (Vue) {
 
   Vue.prototype.$mount = function (el) {
     if (this._isCompiled) {
-      process.env.NODE_ENV !== 'production' && warn('$mount() should be called only once.');
+      process.env.NODE_ENV !== 'production' && warn('$mount() should be called only once.', this);
       return;
     }
     el = query(el);
@@ -15108,10 +15601,7 @@ var partial = {
   },
 
   insert: function insert(id) {
-    var partial = resolveAsset(this.vm.$options, 'partials', id);
-    if (process.env.NODE_ENV !== 'production') {
-      assertAsset(partial, 'partial', id);
-    }
+    var partial = resolveAsset(this.vm.$options, 'partials', id, true);
     if (partial) {
       this.factory = new FragmentFactory(this.vm, partial);
       vIf.insert.call(this);
@@ -15167,9 +15657,7 @@ function filterBy(arr, search, delimiter) {
   // because why not
   var n = delimiter === 'in' ? 3 : 2;
   // extract and flatten keys
-  var keys = toArray(arguments, n).reduce(function (prev, cur) {
-    return prev.concat(cur);
-  }, []);
+  var keys = Array.prototype.concat.apply([], toArray(arguments, n));
   var res = [];
   var item, key, val, j;
   for (var i = 0, l = arr.length; i < l; i++) {
@@ -15194,26 +15682,58 @@ function filterBy(arr, search, delimiter) {
 /**
  * Filter filter for arrays
  *
- * @param {String} sortKey
- * @param {String} reverse
+ * @param {String|Array<String>|Function} ...sortKeys
+ * @param {Number} [order]
  */
 
-function orderBy(arr, sortKey, reverse) {
+function orderBy(arr) {
+  var comparator = null;
+  var sortKeys = undefined;
   arr = convertArray(arr);
-  if (!sortKey) {
-    return arr;
+
+  // determine order (last argument)
+  var args = toArray(arguments, 1);
+  var order = args[args.length - 1];
+  if (typeof order === 'number') {
+    order = order < 0 ? -1 : 1;
+    args = args.length > 1 ? args.slice(0, -1) : args;
+  } else {
+    order = 1;
   }
-  var order = reverse && reverse < 0 ? -1 : 1;
-  // sort on a copy to avoid mutating original array
-  return arr.slice().sort(function (a, b) {
-    if (sortKey !== '$key') {
-      if (isObject(a) && '$value' in a) a = a.$value;
-      if (isObject(b) && '$value' in b) b = b.$value;
+
+  // determine sortKeys & comparator
+  var firstArg = args[0];
+  if (!firstArg) {
+    return arr;
+  } else if (typeof firstArg === 'function') {
+    // custom comparator
+    comparator = function (a, b) {
+      return firstArg(a, b) * order;
+    };
+  } else {
+    // string keys. flatten first
+    sortKeys = Array.prototype.concat.apply([], args);
+    comparator = function (a, b, i) {
+      i = i || 0;
+      return i >= sortKeys.length - 1 ? baseCompare(a, b, i) : baseCompare(a, b, i) || comparator(a, b, i + 1);
+    };
+  }
+
+  function baseCompare(a, b, sortKeyIndex) {
+    var sortKey = sortKeys[sortKeyIndex];
+    if (sortKey) {
+      if (sortKey !== '$key') {
+        if (isObject(a) && '$value' in a) a = a.$value;
+        if (isObject(b) && '$value' in b) b = b.$value;
+      }
+      a = isObject(a) ? getPath(a, sortKey) : a;
+      b = isObject(b) ? getPath(b, sortKey) : b;
     }
-    a = isObject(a) ? getPath(a, sortKey) : a;
-    b = isObject(b) ? getPath(b, sortKey) : b;
     return a === b ? 0 : a > b ? order : -order;
-  });
+  }
+
+  // sort on a copy to avoid mutating original array
+  return arr.slice().sort(comparator);
 }
 
 /**
@@ -15303,17 +15823,19 @@ var filters = {
    * 12345 => $12,345.00
    *
    * @param {String} sign
+   * @param {Number} decimals Decimal places
    */
 
-  currency: function currency(value, _currency) {
+  currency: function currency(value, _currency, decimals) {
     value = parseFloat(value);
     if (!isFinite(value) || !value && value !== 0) return '';
     _currency = _currency != null ? _currency : '$';
-    var stringified = Math.abs(value).toFixed(2);
-    var _int = stringified.slice(0, -3);
+    decimals = decimals != null ? decimals : 2;
+    var stringified = Math.abs(value).toFixed(decimals);
+    var _int = decimals ? stringified.slice(0, -1 - decimals) : stringified;
     var i = _int.length % 3;
     var head = i > 0 ? _int.slice(0, i) + (_int.length > 3 ? ',' : '') : '';
-    var _float = stringified.slice(-3);
+    var _float = decimals ? stringified.slice(-1 - decimals) : '';
     var sign = value < 0 ? '-' : '';
     return sign + _currency + head + _int.slice(i).replace(digitsRE, '$1,') + _float;
   },
@@ -15533,21 +16055,23 @@ function installGlobalAPI (Vue) {
 
 installGlobalAPI(Vue);
 
-Vue.version = '1.0.20';
+Vue.version = '1.0.23';
 
 // devtools global hook
 /* istanbul ignore next */
-if (config.devtools) {
-  if (devtools) {
-    devtools.emit('init', Vue);
-  } else if (process.env.NODE_ENV !== 'production' && inBrowser && /Chrome\/\d+/.test(window.navigator.userAgent)) {
-    console.log('Download the Vue Devtools for a better development experience:\n' + 'https://github.com/vuejs/vue-devtools');
+setTimeout(function () {
+  if (config.devtools) {
+    if (devtools) {
+      devtools.emit('init', Vue);
+    } else if (process.env.NODE_ENV !== 'production' && inBrowser && /Chrome\/\d+/.test(window.navigator.userAgent)) {
+      console.log('Download the Vue Devtools for a better development experience:\n' + 'https://github.com/vuejs/vue-devtools');
+    }
   }
-}
+}, 0);
 
 module.exports = Vue;
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":58}],88:[function(require,module,exports){
+},{"_process":71}],101:[function(require,module,exports){
 var inserted = exports.cache = {}
 
 exports.insert = function (css) {
@@ -15567,7 +16091,7 @@ exports.insert = function (css) {
   return elem
 }
 
-},{}],89:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 exports.sync = function (store, router) {
   patchStore(store)
   store.router = router
@@ -15633,9 +16157,9 @@ function patchStore (store) {
   })
 }
 
-},{}],90:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 /*!
- * Vuex v0.6.2
+ * Vuex v0.6.3
  * (c) 2016 Evan You
  * Released under the MIT License.
  */
@@ -15794,6 +16318,10 @@ function patchStore (store) {
       _init.call(this, options);
     };
 
+    /**
+     * Vuex init hook, injected into each instances init hooks list.
+     */
+
     function vuexInit() {
       var options = this.$options;
       var store = options.store;
@@ -15830,27 +16358,55 @@ function patchStore (store) {
         if (actions) {
           options.methods = options.methods || {};
           for (var _key in actions) {
-            options.methods[_key] = makeBoundAction(actions[_key], this.$store);
+            options.methods[_key] = makeBoundAction(this.$store, actions[_key], _key);
           }
         }
       }
     }
 
+    /**
+     * Setter for all getter properties.
+     */
+
     function setter() {
       throw new Error('vuex getter properties are read-only.');
     }
 
+    /**
+     * Define a Vuex getter on an instance.
+     *
+     * @param {Vue} vm
+     * @param {String} key
+     * @param {Function} getter
+     */
+
     function defineVuexGetter(vm, key, getter) {
-      Object.defineProperty(vm, key, {
-        enumerable: true,
-        configurable: true,
-        get: makeComputedGetter(vm.$store, getter),
-        set: setter
-      });
+      if (typeof getter !== 'function') {
+        console.warn('[vuex] Getter bound to key \'vuex.getters.' + key + '\' is not a function.');
+      } else {
+        Object.defineProperty(vm, key, {
+          enumerable: true,
+          configurable: true,
+          get: makeComputedGetter(vm.$store, getter),
+          set: setter
+        });
+      }
     }
+
+    /**
+     * Make a computed getter, using the same caching mechanism of computed
+     * properties. In addition, it is cached on the raw getter function using
+     * the store's unique cache id. This makes the same getter shared
+     * across all components use the same underlying watcher, and makes
+     * the getter evaluated only once during every flush.
+     *
+     * @param {Store} store
+     * @param {Function} getter
+     */
 
     function makeComputedGetter(store, getter) {
       var id = store._getterCacheId;
+
       // cached
       if (getter[id]) {
         return getter[id];
@@ -15874,7 +16430,18 @@ function patchStore (store) {
       return computedGetter;
     }
 
-    function makeBoundAction(action, store) {
+    /**
+     * Make a bound-to-store version of a raw action function.
+     *
+     * @param {Store} store
+     * @param {Function} action
+     * @param {String} key
+     */
+
+    function makeBoundAction(store, action, key) {
+      if (typeof action !== 'function') {
+        console.warn('[vuex] Action bound to key \'vuex.actions.' + key + '\' is not a function.');
+      }
       return function vuexBoundAction() {
         for (var _len = arguments.length, args = Array(_len), _key2 = 0; _key2 < _len; _key2++) {
           args[_key2] = arguments[_key2];
@@ -15980,22 +16547,19 @@ function patchStore (store) {
        */
 
       value: function dispatch(type) {
-        var _this2 = this;
-
         for (var _len2 = arguments.length, payload = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
           payload[_key2 - 1] = arguments[_key2];
         }
 
+        var silent = false;
         // compatibility for object actions, e.g. FSA
         if ((typeof type === 'undefined' ? 'undefined' : babelHelpers.typeof(type)) === 'object' && type.type && arguments.length === 1) {
-          payload = [type];
+          payload = [type.payload];
+          if (type.silent) silent = true;
           type = type.type;
         }
         var mutation = this._mutations[type];
-        var prevSnapshot = this._prevSnapshot;
         var state = this.state;
-        var snapshot = void 0,
-            clonedPayload = void 0;
         if (mutation) {
           this._dispatching = true;
           // apply the mutation
@@ -16007,20 +16571,7 @@ function patchStore (store) {
             mutation.apply(undefined, [state].concat(babelHelpers.toConsumableArray(payload)));
           }
           this._dispatching = false;
-          // invoke middlewares
-          if (this._needSnapshots) {
-            snapshot = this._prevSnapshot = deepClone(state);
-            clonedPayload = deepClone(payload);
-          }
-          this._middlewares.forEach(function (m) {
-            if (m.onMutation) {
-              if (m.snapshot) {
-                m.onMutation({ type: type, payload: clonedPayload }, snapshot, prevSnapshot, _this2);
-              } else {
-                m.onMutation({ type: type, payload: payload }, state, _this2);
-              }
-            }
-          });
+          if (!silent) this._applyMiddlewares(type, payload);
         } else {
           console.warn('[vuex] Unknown mutation: ' + type);
         }
@@ -16039,10 +16590,10 @@ function patchStore (store) {
     }, {
       key: 'watch',
       value: function watch(expOrFn, cb, options) {
-        var _this3 = this;
+        var _this2 = this;
 
         return this._vm.$watch(function () {
-          return typeof expOrFn === 'function' ? expOrFn(_this3.state) : _this3._vm.$get(expOrFn);
+          return typeof expOrFn === 'function' ? expOrFn(_this2.state) : _this2._vm.$get(expOrFn);
         }, cb, options);
       }
 
@@ -16076,10 +16627,8 @@ function patchStore (store) {
     }, {
       key: '_setupModuleState',
       value: function _setupModuleState(state, modules) {
-        var setPath = Vue.parsers.path.setPath;
-
         Object.keys(modules).forEach(function (key) {
-          setPath(state, key, modules[key].state || {});
+          Vue.set(state, key, modules[key].state || {});
         });
       }
 
@@ -16094,8 +16643,6 @@ function patchStore (store) {
       key: '_setupModuleMutations',
       value: function _setupModuleMutations(updatedModules) {
         var modules = this._modules;
-        var getPath = Vue.parsers.path.getPath;
-
         var allMutations = [this._rootMutations];
         Object.keys(updatedModules).forEach(function (key) {
           modules[key] = updatedModules[key];
@@ -16112,7 +16659,7 @@ function patchStore (store) {
                 args[_key3 - 1] = arguments[_key3];
               }
 
-              original.apply(undefined, [getPath(state, key)].concat(args));
+              original.apply(undefined, [state[key]].concat(args));
             };
           });
           allMutations.push(mutations);
@@ -16132,12 +16679,12 @@ function patchStore (store) {
     }, {
       key: '_setupMutationCheck',
       value: function _setupMutationCheck() {
-        var _this4 = this;
+        var _this3 = this;
 
         var Watcher = getWatcher(this._vm);
         /* eslint-disable no-new */
         new Watcher(this._vm, '$data', function () {
-          if (!_this4._dispatching) {
+          if (!_this3._dispatching) {
             throw new Error('[vuex] Do not mutate vuex store state outside mutation handlers.');
           }
         }, { deep: true, sync: true });
@@ -16158,7 +16705,7 @@ function patchStore (store) {
     }, {
       key: '_setupMiddlewares',
       value: function _setupMiddlewares(middlewares, state) {
-        var _this5 = this;
+        var _this4 = this;
 
         this._middlewares = [devtoolMiddleware].concat(middlewares);
         this._needSnapshots = middlewares.some(function (m) {
@@ -16171,7 +16718,38 @@ function patchStore (store) {
         // call init hooks
         this._middlewares.forEach(function (m) {
           if (m.onInit) {
-            m.onInit(m.snapshot ? initialSnapshot : state, _this5);
+            m.onInit(m.snapshot ? initialSnapshot : state, _this4);
+          }
+        });
+      }
+
+      /**
+       * Apply the middlewares on a given mutation.
+       *
+       * @param {String} type
+       * @param {Array} payload
+       */
+
+    }, {
+      key: '_applyMiddlewares',
+      value: function _applyMiddlewares(type, payload) {
+        var _this5 = this;
+
+        var state = this.state;
+        var prevSnapshot = this._prevSnapshot;
+        var snapshot = void 0,
+            clonedPayload = void 0;
+        if (this._needSnapshots) {
+          snapshot = this._prevSnapshot = deepClone(state);
+          clonedPayload = deepClone(payload);
+        }
+        this._middlewares.forEach(function (m) {
+          if (m.onMutation) {
+            if (m.snapshot) {
+              m.onMutation({ type: type, payload: clonedPayload }, snapshot, prevSnapshot, _this5);
+            } else {
+              m.onMutation({ type: type, payload: payload }, state, _this5);
+            }
           }
         });
       }
@@ -16188,6 +16766,10 @@ function patchStore (store) {
   }();
 
   function install(_Vue) {
+    if (Vue) {
+      console.warn('[vuex] already installed. Vue.use(Vuex) should be called only once.');
+      return;
+    }
     Vue = _Vue;
     override(Vue);
   }
@@ -16210,7 +16792,7 @@ function patchStore (store) {
   return index;
 
 }));
-},{}],91:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -16237,7 +16819,7 @@ module.exports = {
         }
     }
 };
-},{}],92:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 'use strict';
 
 var EventEmitter = require('tiny-emitter'),
@@ -16344,7 +16926,7 @@ for(var prop in events) {
 function isString(string) {
     return toString.call(string) === '[object String]';
 }
-},{"./events":91,"debounce":56,"tiny-emitter":59}],93:[function(require,module,exports){
+},{"./events":104,"debounce":69,"tiny-emitter":72}],106:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16387,7 +16969,7 @@ var getRandomPlaylist = exports.getRandomPlaylist = function getRandomPlaylist(_
   return dispatch(_mutationTypes.RANDOMPLAYLIST, queue);
 };
 
-},{"./mutation-types":95}],94:[function(require,module,exports){
+},{"./mutation-types":108}],107:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16400,7 +16982,7 @@ function recentHistory(state) {
   return state.history.slice(begin, end).toString().replace(/,/g, ', ');
 }
 
-},{}],95:[function(require,module,exports){
+},{}],108:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16413,7 +16995,7 @@ var ISUSERAUTHENTICATED = exports.ISUSERAUTHENTICATED = 'ISUSERAUTHENTICATED';
 
 var USERPLAYLIST = exports.USERPLAYLIST = 'USERPLAYLIST';
 
-},{}],96:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16479,7 +17061,7 @@ if (module.hot) {(function () {  module.hot.accept()
     hotAPI.update(id, module.exports, (typeof module.exports === "function" ? module.exports.options : module.exports).template)
   }
 })()}
-},{"./Vuex/actions":93,"./components/partials/menu.vue":104,"./components/widgets/languageswitcher.vue":105,"./vuex/store":112,"vue":87,"vue-hot-reload-api":60,"vue-resize-mixin":61}],97:[function(require,module,exports){
+},{"./Vuex/actions":106,"./components/partials/menu.vue":117,"./components/widgets/languageswitcher.vue":118,"./vuex/store":125,"vue":100,"vue-hot-reload-api":73,"vue-resize-mixin":74}],110:[function(require,module,exports){
 "use strict";
 if (module.exports.__esModule) module.exports = module.exports.default
 ;(typeof module.exports === "function"? module.exports.options: module.exports).template = "\n\n <!-- Page Content -->\n<div class=\"container\">\n\n    <!-- Page Header -->\n    <div class=\"row\">\n        <div class=\"col-lg-12\">\n            <h1 class=\"page-header\">Home\n                <small>Secondary Text</small>\n            </h1>\n        </div>\n    </div>\n    <!-- /.row -->\n\n    <!-- Projects Row -->\n    <div class=\"row\">\n        <div class=\"col-md-4 portfolio-item\">\n            <a href=\"#\">\n                <img class=\"img-responsive\" src=\"http://placehold.it/700x400\" alt=\"\">\n            </a>\n            <h3>\n                <a href=\"#\">Project Name</a>\n            </h3>\n            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>\n        </div>\n        <div class=\"col-md-4 portfolio-item\">\n            <a href=\"#\">\n                <img class=\"img-responsive\" src=\"http://placehold.it/700x400\" alt=\"\">\n            </a>\n            <h3>\n                <a href=\"#\">Project Name</a>\n            </h3>\n            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>\n        </div>\n        <div class=\"col-md-4 portfolio-item\">\n            <a href=\"#\">\n                <img class=\"img-responsive\" src=\"http://placehold.it/700x400\" alt=\"\">\n            </a>\n            <h3>\n                <a href=\"#\">Project Name</a>\n            </h3>\n            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>\n        </div>\n    </div>\n    <!-- /.row -->\n\n    <!-- Projects Row -->\n    <div class=\"row\">\n        <div class=\"col-md-4 portfolio-item\">\n            <a href=\"#\">\n                <img class=\"img-responsive\" src=\"http://placehold.it/700x400\" alt=\"\">\n            </a>\n            <h3>\n                <a href=\"#\">Project Name</a>\n            </h3>\n            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>\n        </div>\n        <div class=\"col-md-4 portfolio-item\">\n            <a href=\"#\">\n                <img class=\"img-responsive\" src=\"http://placehold.it/700x400\" alt=\"\">\n            </a>\n            <h3>\n                <a href=\"#\">Project Name</a>\n            </h3>\n            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>\n        </div>\n        <div class=\"col-md-4 portfolio-item\">\n            <a href=\"#\">\n                <img class=\"img-responsive\" src=\"http://placehold.it/700x400\" alt=\"\">\n            </a>\n            <h3>\n                <a href=\"#\">Project Name</a>\n            </h3>\n            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>\n        </div>\n    </div>\n\n    <!-- Projects Row -->\n    <div class=\"row\">\n        <div class=\"col-md-4 portfolio-item\">\n            <a href=\"#\">\n                <img class=\"img-responsive\" src=\"http://placehold.it/700x400\" alt=\"\">\n            </a>\n            <h3>\n                <a href=\"#\">Project Name</a>\n            </h3>\n            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>\n        </div>\n        <div class=\"col-md-4 portfolio-item\">\n            <a href=\"#\">\n                <img class=\"img-responsive\" src=\"http://placehold.it/700x400\" alt=\"\">\n            </a>\n            <h3>\n                <a href=\"#\">Project Name</a>\n            </h3>\n            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>\n        </div>\n        <div class=\"col-md-4 portfolio-item\">\n            <a href=\"#\">\n                <img class=\"img-responsive\" src=\"http://placehold.it/700x400\" alt=\"\">\n            </a>\n            <h3>\n                <a href=\"#\">Project Name</a>\n            </h3>\n            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>\n        </div>\n    </div>\n    <!-- /.row -->\n\n    <hr>\n\n    <!-- Footer -->\n    <footer>\n        <div class=\"row\">\n            <div class=\"col-lg-12\">\n                <p>Copyright © Your Website 2014</p>\n            </div>\n        </div>\n        <!-- /.row -->\n    </footer>\n\n</div>\n<!-- /.container -->\n\n"
@@ -16494,7 +17076,7 @@ if (module.hot) {(function () {  module.hot.accept()
     hotAPI.update(id, module.exports, (typeof module.exports === "function" ? module.exports.options : module.exports).template)
   }
 })()}
-},{"vue":87,"vue-hot-reload-api":60}],98:[function(require,module,exports){
+},{"vue":100,"vue-hot-reload-api":73}],111:[function(require,module,exports){
 ;(typeof module.exports === "function"? module.exports.options: module.exports).template = "\n\n"
 if (module.hot) {(function () {  module.hot.accept()
   var hotAPI = require("vue-hot-reload-api")
@@ -16507,8 +17089,8 @@ if (module.hot) {(function () {  module.hot.accept()
     hotAPI.update(id, module.exports, (typeof module.exports === "function" ? module.exports.options : module.exports).template)
   }
 })()}
-},{"vue":87,"vue-hot-reload-api":60}],99:[function(require,module,exports){
-var __vueify_style__ = require("vueify-insert-css").insert("\n.item {\n  cursor: pointer;\n}\n.bold {\n  font-weight: bold;\n  font-size: 110%;\n}\n.red {\n    color:red;\n}\nul {\n  padding-left: 2em;\n  line-height: 1.7em;\n  list-style-type: dot;\n} \n")
+},{"vue":100,"vue-hot-reload-api":73}],112:[function(require,module,exports){
+var __vueify_style__ = require("vueify-insert-css").insert("\n.item {\n  cursor: pointer;\n}\n.bold {\n  font-weight: bold;\n  font-size: 110%;\n}\n.red {\n    color:red;\n}\nul {\n  padding-left: 2em;\n  line-height: 1.7em;\n  list-style-type: dot;\n}\n")
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16584,14 +17166,14 @@ exports.default = {
   }
 };
 if (module.exports.__esModule) module.exports = module.exports.default
-;(typeof module.exports === "function"? module.exports.options: module.exports).template = "\n <!-- Page Content -->\n<div class=\"container\">\n\n    <!-- Page Header -->\n    <div class=\"row\">\n        <div class=\"col-lg-12\">\n            <h1 class=\"page-header\">About <a @click=\"toggleRoute\">Routing</a>, <a @click=\"toggleComponent\">Components and Passing data</a>\n            </h1>\n            <h4>Strongly recommend:</h4>\n            <h5>before or after watching this to look at the documentation since I'm not going to explain everything. <a href=\"http://vuejs.github.io/vue-router/en/index.html\">http://vuejs.github.io/vue-router</a></h5>\n            <h5>Install this <a target=\"_newtab\" href=\"https://chrome.google.com/webstore/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd\">chrome extension</a>, it's super useful. After installation open a project that has vue in it and debug on true, in your console you'll get a tab vue.js devtools, see screenshots at extension.</h5>\n    \n        </div>\n    </div>\n    <!-- /.row -->\n\n    <div class=\"row\" v-show=\"routing\">\n        <div class=\"col-lg-12\">\n            <h2 class=\"page-header\">Routing</h2>\n        </div>\n\n        <div class=\"col-lg-5\">\n            <p></p>\n            <p>(You can double click on an item to turn it into a folder. This navigation tree represents the folder structure of this small project currently.)</p>\n\n            <!-- the demo root element -->\n            <ul id=\"demo\">\n              <item class=\"item\" :model=\"treeData\">\n              </item>\n            </ul>\n        </div>\n\n        <div class=\"col-lg-7\">\n\n        <h3>Add this to any dom element you want</h3>\n<pre>1/ if not necessary to name your routes\nv-link=\"'your-url'\"\n\n2/ but honestly naming routes makes it cleaner and maintainable if\nyou have like a lot of urls, sure it's more work \nbut you won't have to worry about wrong urls.\nv-link=\"{ name : 'home' }\"\n\n3/ Parameters\nv-link=\"{ name : 'subtype.index' , params : { type: 'news' , subtype : 'world' } }\"\n</pre>\n\n        <h3>main.js</h3>\n<pre class=\"language-javascript\" data-jsonp=\"https://api.github.com/repos/leaverou/prism/contents/prism.js\">import Vue from 'vue'\nimport VueRouter from 'vue-router'\nimport { configRouter } from './route-config'\nimport { sync } from 'vuex-router-sync'\n\nVue.config.debug = true;\nVue.use(VueResource)\nVue.use(VueRouter)\n\nconst router = new VueRouter({\n  //history: true,\n  saveScrollPosition: true,\n  transitionOnLoad: true\n})\nsync(store, router)\nconfigRouter(router)\n\nVue.transition('googletransition', {\n    enterClass: 'fadeInUp',\n    leaveClass: 'fadeOutDown'\n})\n\nconst App = Vue.extend(require('./app.vue'))\nrouter.start(App,'#app')\n</pre>\n\n        <h3>route-config.js</h3>\n<pre class=\"language-javascript\" data-jsonp=\"https://api.github.com/repos/leaverou/prism/contents/prism.js\">// normal routes\nrouter.map({\n    '/': {\n        name: 'home', // name route\n        component: require('./components/pages/general/home.vue'),\n        keepAlive: true\n    },\n    '/about': {\n        name: 'about',\n        component: require('./components/pages/general/about.vue'),\n        keepAlive: true\n    },\n    '/team': {\n        name: 'team',\n        component: require('./components/pages/users/team.vue'),\n        keepAlive: true\n    },\n    '/contact': {\n        name: 'contact',\n        component: require('./components/pages/contact/create.vue'),\n        keepAlive: true\n    },\n    \n    '/:type': {\n        name: 'type.index', // give the route a name\n        component: require('./components/pages/posts/index.vue'),\n        subRoutes: {\n            ':subtype': {\n                name: 'subtype.index', // give the route a name\n                component: require('./components/pages/posts/index.vue'),\n                keepAlive: true\n            }\n        },\n        keepAlive: true\n    },\n    '/article/:slug': {\n        name: 'post.show',\n        component: require('./components/pages/posts/show.vue'),\n        keepAlive: true\n    },\n\n\n    // not found handler\n    '*': {\n        component: require('./components/pages/errors/404.vue')\n    }\n})\n\n// redirect\nrouter.redirect({\n    '/info': '/about',\n    '/hello/:userId': '/user/:userId'\n})\n\n// global before\n// 3 options:\n// 1. return a boolean\n// 2. return a Promise that resolves to a boolean\n// 3. call transition.next() or transition.abort()\nrouter.beforeEach((transition) =&gt; {\n    if (transition.to.path === '/forbidden') {\n        router.app.authenticating = true\n        setTimeout(() =&gt; {\n            router.app.authenticating = false\n            alert('this route is forbidden by a global before hook')\n            transition.abort()\n        }, 3000)\n    } else {\n        transition.next()\n    }\n})\n</pre>\n        </div>\n    </div>\n    <!-- /.row -->\n\n    <div class=\"row\" v-show=\"components\">\n        <div class=\"col-lg-12\">\n            <h2 class=\"page-header\">Components</h2>\n        </div>\n\n        <div class=\"col-lg-7\">\n            <h4>So a Vue component</h4>\n            <p> can only have three main tags </p>\n            <ul>\n                <li><code>template</code> - all html</li>\n                <li><code>style</code> - less, sass, css code</li>\n                <li><code>script</code> - purely vue code</li>\n            </ul>\n            <p>Off-topic but good to know: If i'm not mistaken a regular component can have data as object, a component loaded by vue-router however must be a function or it will you give you a vue warn. You can do this -&gt; <code>data(): {}</code> if you're comfortable with ES6. <br> If not then use <code>data : function(){}</code>. </p>\n        \n<pre>route: {\n    data: function(<strong class=\"red\">transition</strong>) {\n        console.log('post route data');\n        var getUrl = this.$route.params.type;\n        if (this.$route.params.subtype !== undefined) {\n            getUrl += '/' + this.$route.params.subtype\n        }\n        <strong>\n        this.$http.get(getUrl).then(function(response) {\n            if (!response.data.posts.length) { transition.abort() }\n            <strong class=\"red\">transition.next(response.data)</strong>\n            this.animateThis = true\n        });\n    },\n    </strong>\n    canActivate(transition) {\n        console.log('post canActivate?')\n        transition.next()\n    },\n    activate() {\n        console.log('activating post...')\n        return new Promise((resolve) =&gt; {\n            console.log('post activated.')\n            resolve()\n        })\n    },\n    deactivate({ next }) {\n        this.animateThis = false\n        setTimeout(function() {\n            next()\n        }, 200)\n    },\n    canReuse(transition) {\n        this.animateThis = false\n        setTimeout(function() {\n            return true\n        }, 200)\n    }\n},\n</pre>\n\n        </div>\n\n        <div class=\"col-lg-5\">\n            <h4>Passing (route)data to your component</h4>\n            <p>First of all you'll have to initialize your data before the route data comes.</p>\n            <p>On the <a target=\"_newtab\" href=\"http://koel.phanan.net/\">Koel project</a> I saw the developer made use of 'stubs'. Great for usability and keeping your code in the component less bloated with data of objects having values that are empty. You don't need all of it, just the values you're going to parse in the html. If you're just going to loop objects this isn't really necessary, I found it to be necessary for a single post for example. Somehow it's already rendering without waiting for your server data, I know there are some variables avalaible <code>$waitingForData</code> and <code>$loadingRouteData</code></p>\n\n            <p>Also make use of v-cloak attribute on the parent dom element where text is going to be loaded. If not you'll see very shortly but noticable the moustache braces with the variable. You can otherwise also make use of v-text=\"your variable\".</p>\n\n            <p>Secondly in your component you'll put a route option. Within this route option you can tap in on route transition hooks. This really is amazing for handling smoothless transition animations between pages. <a target=\"_newtab\" href=\"http://vuejs.github.io/vue-router/en/pipeline/hooks.html\">More information here</a>, it's better explained there. What I'm going to tell you is how to fetch and pass this server data from the data option hook to your initialized data.</p>\n\n            <h5>What you see here is a route-component for a category and subcategory blogposts index page.</h5>\n            <p>The timeouts at deactivate() and canreuse() are there to give my fadeOut animation the time to do it's thing. Without it would skip directly to the next page.</p>\n            \n            <p>As you can see I marked the most important thing red, without it your page won't load and give a vue-warn. Response.data in this case contains only <code>{ posts }</code> object that has an array of objects, it will seed <code>posts:[]</code> in my already initialized data function.</p>\n        </div>\n\n        <div class=\"col-lg-5\">\n            <h3>Vuex store state / Shared state</h3>\n            <p>Vuex gives you the possibility to share data between components, at the time Phanan made Koel he made use of shared state files, I can pressume Vuex was unknown or still in development back then. React has redux, there's also flux and something else.</p>\n\n            <p>Let me give you a practical example: I use this to store and share the selected language in the languageswitcher component, there I import the actions.js file, the function I call in actions.js dispatches to a mutator, the mutator controls changes to the store state. You could kind of compare it with laravel controllers. It's not really a thing of my own it's a design pattern apparently. Next I add <code>vuex: {\n            getters: {\n                shortlocale: state =&gt; state.shortlocale\n            }\n        },</code> which I then can access as a regular data object. I'm also using this for managing music with a queue. </p>\n            \n        <p>Be aware! when you refresh: the mutated data in Vuex store is not saved and won't be saved. I save it in (browser) local- or sessionStorage, for now. </p>\n\n        <p>Last but not least: You do need to import vuex and the store/index.js In the App component that is an extension. Go and take a look there. If you're interested this goes deeper about how vuex and redux works and is designed.</p>\n\n        <div class=\"embed-responsive embed-responsive-16by9\">\n          <iframe class=\"embed-responsive-item\" src=\"https://www.youtube.com/embed/l1KHL-TX3qs\"></iframe>\n        </div>\n        </div>\n    </div>\n\n    <hr>\n\n    <!-- Footer -->\n    <footer>\n        <div class=\"row\">\n            <div class=\"col-lg-12\">\n                <p>Copyright © Your Website 2014</p>\n            </div>\n        </div>\n        <!-- /.row -->\n    </footer>\n\n</div>\n<!-- /.container -->\n\n"
+;(typeof module.exports === "function"? module.exports.options: module.exports).template = "\n <!-- Page Content -->\n<div class=\"container\">\n\n    <!-- Page Header -->\n    <div class=\"row\">\n        <div class=\"col-lg-12\">\n            <h1 class=\"page-header\">About <a @click=\"toggleRoute\">Routing</a>, <a @click=\"toggleComponent\">Components and Passing data</a>\n            </h1>\n            <h4>Strongly recommend:</h4>\n            <h5>before or after watching this to look at the documentation since I'm not going to explain everything. <a href=\"http://vuejs.github.io/vue-router/en/index.html\">http://vuejs.github.io/vue-router</a></h5>\n            <h5>Install this <a target=\"_newtab\" href=\"https://chrome.google.com/webstore/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd\">chrome extension</a>, it's super useful. After installation open a project that has vue in it and debug on true, in your console you'll get a tab vue.js devtools, see screenshots at extension.</h5>\n\n        </div>\n    </div>\n    <!-- /.row -->\n\n    <div class=\"row\" v-show=\"routing\">\n        <div class=\"col-lg-12\">\n            <h2 class=\"page-header\">Routing</h2>\n        </div>\n\n        <div class=\"col-lg-5\">\n            <p></p>\n            <p>(You can double click on an item to turn it into a folder. This navigation tree represents the folder structure of this small project currently.)</p>\n\n            <!-- the demo root element -->\n            <ul id=\"demo\">\n              <item class=\"item\" :model=\"treeData\">\n              </item>\n            </ul>\n        </div>\n\n        <div class=\"col-lg-7\">\n\n        <h3>Add this to any dom element you want</h3>\n<pre>1/ if not necessary to name your routes\nv-link=\"'your-url'\"\n\n2/ but honestly naming routes makes it cleaner and maintainable if\nyou have like a lot of urls, sure it's more work\nbut you won't have to worry about wrong urls.\nv-link=\"{ name : 'home' }\"\n\n3/ Parameters\nv-link=\"{ name : 'subtype.index' , params : { type: 'news' , subtype : 'world' } }\"\n</pre>\n\n        <h3>main.js</h3>\n<pre class=\"language-javascript\" data-jsonp=\"https://api.github.com/repos/leaverou/prism/contents/prism.js\">import Vue from 'vue'\nimport VueRouter from 'vue-router'\nimport { configRouter } from './route-config'\nimport { sync } from 'vuex-router-sync'\n\nVue.config.debug = true;\nVue.use(VueResource)\nVue.use(VueRouter)\n\nconst router = new VueRouter({\n  //history: true,\n  saveScrollPosition: true,\n  transitionOnLoad: true\n})\nsync(store, router)\nconfigRouter(router)\n\nVue.transition('googletransition', {\n    enterClass: 'fadeInUp',\n    leaveClass: 'fadeOutDown'\n})\n\nconst App = Vue.extend(require('./app.vue'))\nrouter.start(App,'#app')\n</pre>\n\n        <h3>route-config.js</h3>\n<pre class=\"language-javascript\" data-jsonp=\"https://api.github.com/repos/leaverou/prism/contents/prism.js\">// normal routes\nrouter.map({\n    '/': {\n        name: 'home', // name route\n        component: require('./components/pages/general/home.vue'),\n        keepAlive: true\n    },\n    '/about': {\n        name: 'about',\n        component: require('./components/pages/general/about.vue'),\n        keepAlive: true\n    },\n    '/team': {\n        name: 'team',\n        component: require('./components/pages/users/team.vue'),\n        keepAlive: true\n    },\n    '/contact': {\n        name: 'contact',\n        component: require('./components/pages/contact/create.vue'),\n        keepAlive: true\n    },\n\n    '/:type': {\n        name: 'type.index', // give the route a name\n        component: require('./components/pages/posts/index.vue'),\n        subRoutes: {\n            ':subtype': {\n                name: 'subtype.index', // give the route a name\n                component: require('./components/pages/posts/index.vue'),\n                keepAlive: true\n            }\n        },\n        keepAlive: true\n    },\n    '/article/:slug': {\n        name: 'post.show',\n        component: require('./components/pages/posts/show.vue'),\n        keepAlive: true\n    },\n\n\n    // not found handler\n    '*': {\n        component: require('./components/pages/errors/404.vue')\n    }\n})\n\n// redirect\nrouter.redirect({\n    '/info': '/about',\n    '/hello/:userId': '/user/:userId'\n})\n\n// global before\n// 3 options:\n// 1. return a boolean\n// 2. return a Promise that resolves to a boolean\n// 3. call transition.next() or transition.abort()\nrouter.beforeEach((transition) =&gt; {\n    if (transition.to.path === '/forbidden') {\n        router.app.authenticating = true\n        setTimeout(() =&gt; {\n            router.app.authenticating = false\n            alert('this route is forbidden by a global before hook')\n            transition.abort()\n        }, 3000)\n    } else {\n        transition.next()\n    }\n})\n</pre>\n        </div>\n    </div>\n    <!-- /.row -->\n\n    <div class=\"row\" v-show=\"components\">\n        <div class=\"col-lg-12\">\n            <h2 class=\"page-header\">Components</h2>\n        </div>\n\n        <div class=\"col-lg-7\">\n            <h4>So a Vue component</h4>\n            <p> can only have three main tags </p>\n            <ul>\n                <li><code>template</code> - all html</li>\n                <li><code>style</code> - less, sass, css code</li>\n                <li><code>script</code> - purely vue code</li>\n            </ul>\n            <p>Off-topic but good to know: If i'm not mistaken a regular component can have data as object, a component loaded by vue-router however must be a function or it will you give you a vue warn. You can do this -&gt; <code>data(): {}</code> if you're comfortable with ES6. <br> If not then use <code>data : function(){}</code>. </p>\n\n<pre>route: {\n    data: function(<strong class=\"red\">transition</strong>) {\n        console.log('post route data');\n        var getUrl = this.$route.params.type;\n        if (this.$route.params.subtype !== undefined) {\n            getUrl += '/' + this.$route.params.subtype\n        }\n        <strong>\n        this.$http.get(getUrl).then(function(response) {\n            if (!response.data.posts.length) { transition.abort() }\n            <strong class=\"red\">transition.next(response.data)</strong>\n            this.animateThis = true\n        });\n    },\n    </strong>\n    canActivate(transition) {\n        console.log('post canActivate?')\n        transition.next()\n    },\n    activate() {\n        console.log('activating post...')\n        return new Promise((resolve) =&gt; {\n            console.log('post activated.')\n            resolve()\n        })\n    },\n    deactivate({ next }) {\n        this.animateThis = false\n        setTimeout(function() {\n            next()\n        }, 200)\n    },\n    canReuse(transition) {\n        this.animateThis = false\n        setTimeout(function() {\n            return true\n        }, 200)\n    }\n},\n</pre>\n\n        </div>\n\n        <div class=\"col-lg-5\">\n            <h4>Passing (route)data to your component</h4>\n            <p>First of all you'll have to initialize your data before the route data comes.</p>\n            <p>On the <a target=\"_newtab\" href=\"http://koel.phanan.net/\">Koel project</a> I saw the developer made use of 'stubs'. Great for usability and keeping your code in the component less bloated with data of objects having values that are empty. You don't need all of it, just the values you're going to parse in the html. If you're just going to loop objects this isn't really necessary, I found it to be necessary for a single post for example. Somehow it's already rendering without waiting for your server data, I know there are some variables avalaible <code>$waitingForData</code> and <code>$loadingRouteData</code></p>\n\n            <p>Also make use of v-cloak attribute on the parent dom element where text is going to be loaded. If not you'll see very shortly but noticable the moustache braces with the variable. You can otherwise also make use of v-text=\"your variable\".</p>\n\n            <p>Secondly in your component you'll put a route option. Within this route option you can tap in on route transition hooks. This really is amazing for handling smoothless transition animations between pages. <a target=\"_newtab\" href=\"http://vuejs.github.io/vue-router/en/pipeline/hooks.html\">More information here</a>, it's better explained there. What I'm going to tell you is how to fetch and pass this server data from the data option hook to your initialized data.</p>\n\n            <h5>What you see here is a route-component for a category and subcategory blogposts index page.</h5>\n            <p>The timeouts at deactivate() and canreuse() are there to give my fadeOut animation the time to do it's thing. Without it would skip directly to the next page.</p>\n\n            <p>As you can see I marked the most important thing red, without it your page won't load and give a vue-warn. Response.data in this case contains only <code>{ posts }</code> object that has an array of objects, it will seed <code>posts:[]</code> in my already initialized data function.</p>\n        </div>\n\n        <div class=\"col-lg-5\">\n            <h3>Vuex store state / Shared state</h3>\n            <p>Vuex gives you the possibility to share data between components, at the time Phanan made Koel he made use of shared state files, I can pressume Vuex was unknown or still in development back then. React has redux, there's also flux and something else.</p>\n\n            <p>Let me give you a practical example: I use this to store and share the selected language in the languageswitcher component, there I import the actions.js file, the function I call in actions.js dispatches to a mutator, the mutator controls changes to the store state. You could kind of compare it with laravel controllers. It's not really a thing of my own it's a design pattern apparently. Next I add <code>vuex: {\n            getters: {\n                shortlocale: state =&gt; state.shortlocale\n            }\n        },</code> which I then can access as a regular data object. I'm also using this for managing music with a queue. </p>\n\n        <p>Be aware! when you refresh: the mutated data in Vuex store is not saved and won't be saved. I save it in (browser) local- or sessionStorage, for now. </p>\n\n        <p>Last but not least: You do need to import vuex and the store/index.js In the App component that is an extension. Go and take a look there. If you're interested this goes deeper about how vuex and redux works and is designed.</p>\n\n        <div class=\"embed-responsive embed-responsive-16by9\">\n        </div>\n        </div>\n    </div>\n\n    <hr>\n\n    <!-- Footer -->\n    <footer>\n        <div class=\"row\">\n            <div class=\"col-lg-12\">\n                <p>Copyright © Your Website 2014</p>\n            </div>\n        </div>\n        <!-- /.row -->\n    </footer>\n\n</div>\n<!-- /.container -->\n\n"
 if (module.hot) {(function () {  module.hot.accept()
   var hotAPI = require("vue-hot-reload-api")
   hotAPI.install(require("vue"), true)
   if (!hotAPI.compatible) return
   var id = "/Users/jonasvanderhaegen/Uni-t/testing/example-vue-vuex-vuerouter-laravel/resources/assets/js/vue/components/pages/general/about.vue"
   module.hot.dispose(function () {
-    require("vueify-insert-css").cache["\n.item {\n  cursor: pointer;\n}\n.bold {\n  font-weight: bold;\n  font-size: 110%;\n}\n.red {\n    color:red;\n}\nul {\n  padding-left: 2em;\n  line-height: 1.7em;\n  list-style-type: dot;\n} \n"] = false
+    require("vueify-insert-css").cache["\n.item {\n  cursor: pointer;\n}\n.bold {\n  font-weight: bold;\n  font-size: 110%;\n}\n.red {\n    color:red;\n}\nul {\n  padding-left: 2em;\n  line-height: 1.7em;\n  list-style-type: dot;\n}\n"] = false
     document.head.removeChild(__vueify_style__)
   })
   if (!module.hot.data) {
@@ -16600,7 +17182,7 @@ if (module.hot) {(function () {  module.hot.accept()
     hotAPI.update(id, module.exports, (typeof module.exports === "function" ? module.exports.options : module.exports).template)
   }
 })()}
-},{"../../widgets/navtree.vue":106,"vue":87,"vue-hot-reload-api":60,"vueify-insert-css":88}],100:[function(require,module,exports){
+},{"../../widgets/navtree.vue":119,"vue":100,"vue-hot-reload-api":73,"vueify-insert-css":101}],113:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16622,8 +17204,8 @@ exports.default = {
         return {
             text: {
                 title: {
-                    nl: 'Hoi Uni-t collega!',
-                    en: 'Hello Uni-t colleague!'
+                    nl: 'Hallo KdGCamp',
+                    en: 'Hello KdGCamp!'
                 },
                 sometext: {
                     nl: 'Een curator lijst van geweldige dingen met betrekking tot Vue.js',
@@ -16648,7 +17230,7 @@ exports.default = {
     }
 };
 if (module.exports.__esModule) module.exports = module.exports.default
-;(typeof module.exports === "function"? module.exports.options: module.exports).template = "\n\n <!-- Page Content -->\n<div class=\"container\">\n\n<!-- Page Header -->\n\n<!-- /.row -->\n<div class=\"row\">\n    <div class=\"col-lg-12\">\n\n        <div class=\"row\">\n            <div class=\"col-lg-6\">\n                 <h1 class=\"page-header\">Home\n                    <small>{{ text | locale 'title' }}!</small>\n                 </h1>\n\n                <blockquote>\n                    <p> {{ text | locale 'sometext' }} </p>\n                </blockquote>\n\n                <pre>{{ $data | json }}</pre>\n                <pre>{{ longlocale | json }}</pre>\n                <pre>{{ shortlocale | json }}</pre>\n            </div>\n\n             <div class=\"col-lg-6\">\n                 <div class=\"embed-responsive embed-responsive-16by9\">\n                   <iframe class=\"embed-responsive-item\" src=\"https://www.youtube.com/embed/i3ET71ZCW_E\"></iframe>\n                 </div>\n             </div>\n         </div>\n\n        \n\n         <div class=\"row\">\n             <div class=\"col-lg-6\">\n                 <ul>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#official-resources\">Official Resources</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#external-resources\">External Resources</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#community\">Community</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#podcasts\">Podcasts</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#official-examples\">Official Examples</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#tutorials\">Tutorials</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#development-tools\">Development Tools</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#syntax-highlighting\">Syntax Highlighting</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#snippets\">Snippets</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#libraries--plugins\">Libraries &amp; Plugins</a>\n                         <ul>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#routing\">Routing</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#ajaxdata\">Ajax/Data</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#state-management\">State Management</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#validation\">Validation</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#ui-components\">UI Components</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#i18n\">i18n</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#examples\">Examples</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#boilerplates\">Boilerplates</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#scaffolding\">Scaffolding</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#integrations\">Integrations</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#general-pluginsdirectives\">General Plugins/Directives</a></li>\n                         </ul>\n                     </li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#projects-using-vuejs\">Projects Using Vue.js</a>\n                         <ul>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#open-source\">Open Source</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#appswebsites\">Apps/Websites</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#interactive-experiences\">Interactive Experiences</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#enterprise-usage\">Enterprise Usage</a></li>\n                         </ul>\n                     </li>\n                     <h3><a id=\"user-content-official-resources\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#official-resources\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Official Resources</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"http://vuejs.org/guide/\">Official Guide</a></li>\n                         <li><a target=\"_newtab\" href=\"http://vuejs.org/api/\">API Reference</a></li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue\">GitHub Repo</a></li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue/releases\">Release Notes</a></li>\n                     </ul>\n                     <h3><a id=\"user-content-external-resources\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#external-resources\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>External Resources</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://gist.github.com/hashrock/f575928d0e109ace9ad0\">Vue.js資料まとめ(for japanese)</a> by @hashrock</li>\n                     </ul>\n                     <h3><a id=\"user-content-community\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#community\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Community</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://twitter.com/vuejs\">Twitter</a></li>\n                         <li><a target=\"_newtab\" href=\"https://gitter.im/vuejs/vue\">Gitter Chat Room</a></li>\n                         <li><a target=\"_newtab\" href=\"http://forum.vuejs.org/\">Official Forum</a></li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/simplesmiler/vue-requests\">vue-requests</a> - Request a Vue.js module you wish existed or get ideas for modules</li>\n                     </ul>\n                     <h3><a id=\"user-content-podcasts\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#podcasts\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Podcasts</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"http://www.fullstackradio.com/30\">Full Stack Radio #30 (11-23-2015)</a></li>\n                         <li><a target=\"_newtab\" href=\"https://devchat.tv/js-jabber/187-jsj-vue-js-with-evan-you\">JavaScript Jabber #187 (11-25-2015)</a></li>\n                         <li><a target=\"_newtab\" href=\"https://changelog.com/184/\">Changelog #184 (11-27-2015)</a></li>\n                         <li><a target=\"_newtab\" href=\"http://softwareengineeringdaily.com/2015/12/29/front-end-javascript-with-evan-you/\">Software Engineering Daily (12-29-2015)</a></li>\n                         <li><a target=\"_newtab\" href=\"https://javascriptair.com/episodes/2016-03-30/\">Javascript Air 016 (03-30-2016)</a></li>\n                     </ul>\n                     <h3><a id=\"user-content-official-examples\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#official-examples\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Official Examples</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"http://vuejs.org/guide/\">Basic Examples</a></li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue/tree/dev/examples/todomvc\">Vue.js TodoMVC</a>\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/anfelor/TodoMVC-CoffeeScript-and-Vue.js\">CoffeeScript Version</a></li>\n                             </ul>\n                         </li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-hackernews\">Vue.js HackerNews Clone</a></li>\n                     </ul>\n                     <h3><a id=\"user-content-tutorials\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#tutorials\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Tutorials</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://laracasts.com/series/learning-vue-step-by-step\">Vue.js screencasts</a> on Laracasts</li>\n                         <li><a target=\"_newtab\" href=\"http://www.sitepoint.com/whats-new-in-vue-js-1-0/\">What's New in Vue.js 1.0</a> on Sitepoint</li>\n                         <li><a target=\"_newtab\" href=\"https://auth0.com/blog/2015/11/13/build-an-app-with-vuejs/\">Build an App with Vue.js: From Authentication to Calling an API</a> on Auth0 blog</li>\n                         <li><a target=\"_newtab\" href=\"https://scotch.io/tutorials/create-a-github-file-explorer-using-vue-js\">Create a GitHub File Explorer Using Vue.js</a> on Scotch.io</li>\n                         <li><a target=\"_newtab\" href=\"http://vegibit.com/vue-js-tutorial/\">Vue.js Tutorial</a> on Vegibit</li>\n                         <li><a target=\"_newtab\" href=\"http://skyronic.com/2015/12/28/vue-project-scratch/\">Vue.js build set-up from scratch with webpack, vue-loader and hot reload</a></li>\n                         <li><a target=\"_newtab\" href=\"http://skyronic.com/2016/01/03/vuex-basics-tutorial/\">Vuex basics: Tutorial and explanation</a></li>\n                         <li><a target=\"_newtab\" href=\"https://www.youtube.com/watch?v=l1KHL-TX3qs\">Vuex introduction video - James Browne from London Vue.js Meetup #1</a></li>\n                         <li><a target=\"_newtab\" href=\"https://laravist.com/series/vue-js-1-0-in-action-series\">Vue.js 中文系列视频教程</a> on Laravist</li>\n                         <li><a target=\"_newtab\" href=\"http://coligo.io/vuejs-the-basics/\">Vue.js: The Basics</a> on Coligo.io</li>\n                         <li><a target=\"_newtab\" href=\"http://coligo.io/vuejs-components\">Practical Intro to Components in Vue.js</a> on Coligo.io</li>\n                         <li><a target=\"_newtab\" href=\"http://craigmckenna.com/develop-a-reactive-invoice-app-using-vue-js/\">Develop a Reactive Invoice App using Vue.js</a> on craigmckenna.com</li>\n                         <li><a target=\"_newtab\" href=\"http://coligo.io/vuejs-filters/\">Understanding Filters in Vue.js</a> on Coligo.io</li>\n                         <li><a target=\"_newtab\" href=\"https://www.youtube.com/watch?v=TGSJjDahlrQ\">Hybrid App Example with Laravel and Vue.js in portuguese</a> by @vedovelli</li>\n                         <li><a target=\"_newtab\" href=\"http://coligo.io/markdown-editor-vuejs/\">Creating a Markdown Editor with VueJs and GitHub's API</a> on Coligo.io</li>\n                         <li><a target=\"_newtab\" href=\"http://coligo.io/real-time-analytics-with-nodejs-socketio-vuejs/\">Building a Real-Time Web Analytics Dashboard with NodeJs, Socket.io, and VueJs</a> on Coligo.io</li>\n                         <li><a target=\"_newtab\" href=\"http://oguzhan.in/vue-js-ile-uygulama-gelistirme/\">Vue.js Introduction Turkish Language</a> on oguzhan.in</li>\n                     </ul>\n                     <h4><a id=\"user-content-012-and-earlier\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#012-and-earlier\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>0.12 and earlier</h4>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://laracasts.com/series/learning-vuejs\">Vue.js screencasts</a> on Laracasts <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"https://scotch.io/tutorials/build-an-app-with-vue-js-a-lightweight-alternative-to-angularjs\">Build an App with Vue.js</a> on Scotch.io <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://www.sitepoint.com/getting-started-with-vue-js/\">Getting Started with Vue.js</a> on Sitepoint <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://forum.vuejs.org/topic/49/vue-js-video-series-in-portuguese\">Vue.js video series in portuguese</a> <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://ausite.ru/category/js/vue-js\">Vue.js video series in russian</a> on Ausite <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://mattsparks.com/a-quick-introduction-to-vue-js/\">A Quick Introduction to Vue.js</a> by Matt Sparks <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"https://www.youtube.com/watch?v=QN7l3ydXvx0\">Getting Started with Vue.js + vue-router</a> by Michael Calkins <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://taha-sh.com/blog/many-js-frameworks-but-vuejs-is-different\">Many JS Frameworks but Vue.js Is Different</a> by Taha Shashtari <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://fadeit.dk/blog/post/getting-started-with-vuejs-angularjs-perspective\">Getting Started with Vue.js - AngularJS perspective</a> by Dan Mindru <sup>0.11</sup></li>\n                     </ul>\n                     <h3><a id=\"user-content-development-tools\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#development-tools\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Development Tools</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-cli\">vue-cli</a>: official CLI for scaffolding Vue.js projects.</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-loader\">vue-loader</a> - Vue component loader for Webpack.\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-loader-example\">vue-loader-example</a></li>\n                             </ul>\n                         </li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vueify\">vueify</a> - Vue component transform for Browserify.\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vueify-example\">vueify-example</a></li>\n                             </ul>\n                         </li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-devtools\">vue-devtools</a> - Chrome devtools extension for debugging Vue applications.</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/SkewedAspect/grunt-vueify\">grunt-vueify</a> - Translate <code>.vue</code> files to pure JavaScript, without using Browserify. (Useful for Electron apps)</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/paulpflug/vue-compiler\">vue-compiler</a> - A simple CLI wrapper around vueify</li>\n                         <li><a target=\"_newtab\" href=\"https://atom.io/packages/vue-autocompile\">vue-autocompile</a> - Atom.io package to compile <code>.vue</code> files on save.</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/paulpflug/vue-dev-server\">vue-dev-server</a> - A small webpack-based development server for building standalone <code>vue</code> components</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/rodzzlessa24/vue-go-cli\">vue-go-cli</a> - a CLI tool for scaffolding new projects generating components, services, and mixins.</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/nblackburn/vue-brunch\">brunch-vue</a> - Adds support to Brunch for pre-compiling single file Vue components.</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/rawcreative/vueify-extract-css\">vueify-extract-css</a> - Browserify plugin to extract css from Vueify-compiled single file components to a separate css file.</li>\n                     </ul>\n                     <h3><a id=\"user-content-syntax-highlighting\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#syntax-highlighting\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Syntax Highlighting</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-syntax-highlight\">Sublime Text</a></li>\n                         <li><a target=\"_newtab\" href=\"https://atom.io/packages/language-vue\">Atom</a> by @hedefalk</li>\n                         <li><a target=\"_newtab\" href=\"https://atom.io/packages/language-vue-component\">Atom (2)</a> by @CYBAI</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/posva/vim-vue\">Vim</a> by @darthmall and @posva</li>\n                         <li><a target=\"_newtab\" href=\"https://marketplace.visualstudio.com/items/liuji-jim.vue\">Visual Studio Code</a> by Jim Liu</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/pandao/brackets-vue\">Brackets</a> by @pandao</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/henjue/vue-for-idea\">IntelliJ IDEA / WebStorm</a> by @henjue</li>\n                     </ul>\n                     <h3><a id=\"user-content-projects-using-vuejs\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#projects-using-vuejs\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Projects Using Vue.js</h3>\n                     <ul>\n                         <li>\n                             <h4><a id=\"user-content-open-source\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#open-source\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Open Source</h4>\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"http://pagekit.com/\">PageKit</a> <sup><a target=\"_newtab\" href=\"https://github.com/pagekit/pagekit\">[Source]</a></sup></li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/laravel/spark\">Laravel Spark</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://p5js.org/download/\">p5.js editor</a> <sup><a target=\"_newtab\" href=\"https://github.com/processing/p5.js-editor\">[Source]</a></sup></li>\n                                 <li><a target=\"_newtab\" href=\"https://python-china.org\">Python China</a> <sup><a target=\"_newtab\" href=\"https://github.com/zerqu/qingcheng\">[Source]</a></sup></li>\n                                 <li><a target=\"_newtab\" href=\"http://npmcharts.com\">npmcharts.com</a> <sup><a target=\"_newtab\" href=\"https://github.com/cheapsteak/npmcharts.com\">[Source]</a></sup></li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/jiyinyiyong/todolist\">Todolist</a> by @jiyinyiyong</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/thelinuxlich/vue-dashing-js\">Dashboard framework</a> by @thelinuxlich</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/sapjax/fewords\">a simple notepad</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/ilyashubin/FilterBlend\">FilterBlend</a>: CSS blend modes and filters playground by @ilyashubin</li>\n                                 <li><a target=\"_newtab\" href=\"http://koel.phanan.net\">Koel</a>: Music streaming server</li>\n                                 <li><a target=\"_newtab\" href=\"https://chrome.google.com/webstore/detail/ikhdkkncnoglghljlkmcimlnlhkeamad\">Selection Translator</a> <sup><a target=\"_newtab\" href=\"https://github.com/lmk123/crx-selection-translate\">[Source]</a></sup> A Chrome Extension let browse any language websites has never been easier.</li>\n                                 <li><a target=\"_newtab\" href=\"https://oldj.github.io/SwitchHosts/\">SwitchHosts</a> <sup><a target=\"_newtab\" href=\"https://github.com/oldj/SwitchHosts\">[Source]</a></sup> Switch hosts quickly.</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/mrgodhani/rss-reader\">RSS Reader</a> Simple RSS Reader made using atom electron and vue.js.</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/Zhangdroid/Gokotta\">Gokotta</a>: A simple music player built by electron and vue.</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/Kocisov/coffeebreak\">Coffeebreak</a> Tool for live editing CSS components</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-appswebsites\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#appswebsites\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Apps/Websites</h4>\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"https://www.formlets.com\">Formlets</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://laracasts.com\">Laracasts</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://register.sainsburysentertainment.co.uk/\">Sainsbury's Entertainment onboarding platform</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://cuusoo.com\">CUUSOO</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://esa.io/\">esa.io</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://n1.ru\">N1.ru</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://gold.xitu.io\">稀土掘金</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://www.prague-airport.com/\">Prague Airport</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://www.expressionery.com\">Expressionery</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://bt.workswell.com.au\">BUYIT</a> by @<a target=\"_newtab\" href=\"http://workswell.com.au\">Workswell Australia</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://corentinbac.com/\">Portfolio Site</a> by Corentin Bac</li>\n                                 <li><a target=\"_newtab\" href=\"https://play.google.com/store/apps/details?id=uk.co.dixons.compareprices&amp;hl=en\">Compare Prices by Currys &amp; PCWorld</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://grammarly.com/\">Grammarly</a> mistake-free writing service</li>\n                                 <li><a target=\"_newtab\" href=\"https://laravist.com/\">Laravist</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://atiiv.com\">Atiiv</a> An app aimed for personal trainers and their clients.</li>\n                                 <li><a target=\"_newtab\" href=\"http://v2.statamic.com\">Statamic</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://embalses.azurewebsites.net/\">Embalses!</a> A tool to report water dam level using the U.S. Geological Survey database.</li>\n                                 <li><a target=\"_newtab\" href=\"http://clem.travelmap.fr\">TravelMap</a> A simple way for travellers to create a blog based on a Map</li>\n                                 <li><a target=\"_newtab\" href=\"http://movienote.org\">movienote.org</a> A app which help users maintaining a list about what movie they have watched.</li>\n                                 <li><a target=\"_newtab\" href=\"https://propercloth.com/design-a-shirt\">Proper Cloth Shirt Builder</a> Custom shirt builder</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/julesbou/checkit\">CheckIt</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/Mati365/reddit-news\">Reddit News</a> A browser extension which show notifications and news from reddit</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-interactive-experiences\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#interactive-experiences\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Interactive Experiences</h4>\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"https://newsfeed.fb.com/\">Facebook NewsFeed</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://adblitz.withyoutube.com/#!/advertisers\">YouTube AdBlitz 2016</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://bloodsweatandtools.discovery.ca/gamebench/\">Blood, Sweat and Tools</a> - by Jam3, led by @cheapsteak</li>\n                                 <li><a target=\"_newtab\" href=\"http://omnisense.net\">Omnisense Experience</a> - <em>Awwwards &amp; FWA SOTD, FWA Cutting Edge. Awwwards SOTM nominee.</em></li>\n                                 <li><a target=\"_newtab\" href=\"https://danslapeaudelours.canalplus.fr/en/\">Being the Bear</a> - <em>Awwwards &amp; FWA SOTD, FWA Cutting Edge, Awwwards SOTM nominee.</em></li>\n                                 <li><a target=\"_newtab\" href=\"http://www.starexperience.fr/\">Heineken Star Experience</a> - <em>FWA SOTD.</em></li>\n                                 <li><a target=\"_newtab\" href=\"http://louisansa.com\">Louis Ansa Website (portfolio)</a> - <em>Awwwards SOTD, FWA nominee.</em></li>\n                                 <li><a target=\"_newtab\" href=\"http://www.digitalforallnow.com/en/experience\">Digital For All</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://www.djeco.com/en\">Djeco.com</a></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-enterprise-usage\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#enterprise-usage\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Enterprise Usage</h4>\n                             <ul>\n                                 <li>Alibaba</li>\n                                 <li>Baidu</li>\n                                 <li>Sina Weibo</li>\n                                 <li>Xiaomi</li>\n                                 <li>Ele.me</li>\n                                 <li>Optimizely</li>\n                                 <li>Expedia</li>\n                                 <li>UCWeb</li>\n                                 <li>Line</li>\n                                 <li>Nintendo</li>\n                                 <li>Celtra</li>\n                                 <li>Sainsbury's</li>\n                                 <li><a target=\"_newtab\" href=\"https://arex.io/\">AREX</a></li>\n                             </ul>\n                         </li>\n                     </ul>\n                 </ul>\n             </div>\n             <div class=\"col-lg-6\">\n                 <ul>\n                     \n                     <h3><a id=\"user-content-libraries--plugins\" class=\"anchor\" href=\"#libraries--plugins\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Libraries &amp; Plugins</h3>\n                     <ul>\n                         <li>\n                             <h4><a id=\"user-content-routing\" class=\"anchor\" href=\"#routing\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Routing</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vue-router\">vue-router</a> - Official router for building SPAs. <sup>1.0 compatible</sup></li>\n                                 <li><a href=\"https://github.com/molforp/vue-view\">Vue view</a>, ui-router inspired routes (with states), based on pagejs by @molforp</li>\n                                 <li><a href=\"https://github.com/AlexToudic/vue-page\">Vue page</a>, a routing system based on pagejs by @AlexToudic</li>\n                                 <li><a href=\"https://github.com/bpierre/vue-lanes\">Vue Lanes</a>, an event-based routing system for Vue by @bpierre</li>\n                                 <li><a href=\"https://github.com/ayamflow/vue-route\">Vue route</a>, ng-view inspired routes for Vue by @ayamflow</li>\n                                 <li><a href=\"https://github.com/inca/voie\">voie</a> — simple router / layout manager inspired by FSMs and ui-router by <a href=\"https://github.com/inca\">Boris Okunskiy</a><sup>1.0</sup></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-ajaxdata\" class=\"anchor\" href=\"#ajaxdata\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Ajax/Data</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vue-resource\">vue-resource</a> - AJAX/Resource plugin maintained by the <a href=\"http://pagekit.com/\">PageKit</a> team. <sup>1.0 compatible</sup></li>\n                                 <li><a href=\"https://github.com/vuejs/vue-async-data\">vue-async-data</a> - Async data loading plugin <sup>1.0 compatible</sup></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-state-management\" class=\"anchor\" href=\"#state-management\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>State Management</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vuex\">vuex</a> - Flux/Redux inspired application architecture for Vue.js.</li>\n                                 <li><a href=\"https://github.com/egoist/revue\">revue</a> - Redux binding for Vue by @egoist</li>\n                                 <li><a href=\"https://github.com/yang-wei/vue-redux\">vue-redux</a> - Redux binding for Vue by @yang-wei</li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-freeze\">vue-freeze</a> - Simple state management whitout bloating API and Concept for Vue by <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-simple-store\">vue-simple-store</a> - Store Organizer To Simplify Your Stores for Vue By <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-validation\" class=\"anchor\" href=\"#validation\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Validation</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vue-validator\">vue-validator</a> - Form validation plugin maintained by @kazupon <sup>1.0 compatible</sup></li>\n                                 <li><a href=\"https://github.com/xrado/vue-validator\">Vue validator</a> by @xrado</li>\n                                 <li><a href=\"https://github.com/fergaldoyle/vue-form\">vue-form</a> by @fergaldoyle <sup>1.0 compatible</sup></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-ui-components\" class=\"anchor\" href=\"#ui-components\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>UI Components</h4>\n                             <ul>\n                                 <li><a href=\"http://yuche.github.io/vue-strap/\">VueStrap</a>, Bootstrap components built with pure Vue.js by @yuche <sup>1.0</sup></li>\n                                 <li><a href=\"http://morgul.github.io/vueboot/\">VueBoot</a>, Bootstrap v4 components by @Morgul <sup>1.0</sup></li>\n                                 <li><a href=\"https://github.com/posva/vue-mdl\">vue-mdl</a>: Reusable Vue.js components using Material Design Lite. By <a href=\"https://github.com/posva\">@posva</a></li>\n                                 <li><a href=\"https://github.com/samcrosoft/vue-countup\">vue-countup</a>: A Vue.js component for the very interesting <a href=\"https://inorganik.github.io/countUp.js/\">CountUp.js</a> plugin. <sup>1.0 compatible</sup></li>\n                                 <li><a href=\"https://github.com/hnakamur/vue.tag-editor.js\">Vue Tag Editor Component</a> by @hnakamur</li>\n                                 <li><a href=\"http://pespantelis.github.io/vue-crop/\">Vue Crop</a></li>\n                                 <li><a href=\"http://pespantelis.github.io/vue-typeahead/\">Vue Typeahead</a></li>\n                                 <li><a href=\"https://github.com/dgerber/vue-select-js\">Typed select component</a> by @dgerber</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-select\">vue-select</a>: A Vue.js component implementing the select control with the <a href=\"https://github.com/select2/select2\">jQuery select2 plugin</a>. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-html-editor\">vue-html-editor</a>: A Vue.js component implementing the HTML editor with the <a href=\"https://github.com/summernote/summernote\">jQuery summernote plugin</a>. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-datetime-picker\">vue-datetime-picker</a>: A Vue.js component implementing the datetime picker control using the <a href=\"https://github.com/Eonasdan/bootstrap-datetimepicker\">Eonasdan's bootstrap datetime picker plugin</a>. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-country-select\">vue-country-select</a>: A Vue.js component implementing the select control used to select countries. It depends on <a href=\"https://github.com/Haixing-Hu/vue-select\">vue-select</a> and <a href=\"https://github.com/Haixing-Hu/vue-i18n\">vue-i18n</a>. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/dgerber/vue-formidable\">Form generation from JSON Schema</a> by @dgerber</li>\n                                 <li><a href=\"https://github.com/ericmcdaniel/vue-panel\">vue-panel</a>: A suite of Vue.js components for building Flexbox layouts by @ericmcdaniel</li>\n                                 <li><a href=\"https://github.com/GuillaumeLeclerc/vue-google-maps/\">vue-google-maps</a>: A suite of Vue.js components to build reactive Google Maps Applications by @GuillaumeLeclerc</li>\n                                 <li><a href=\"https://github.com/Twiknight/vue-transition\">vue-transition</a>: A component to trigger a CSS transition at any time by @Twiknight</li>\n                                 <li><a href=\"http://kzima.github.io/vuestrap-icons/#/icons\">SVG icons</a>, SVG sprites in form of a simple <code>&lt;icon&gt;</code> component, by @kzima <sup>1.0</sup></li>\n                                 <li><a href=\"http://gritcode.github.io/gritcode-components/#/toast\">Extra Vuestrap components</a>, more components built with just B4 and Vue.js, by @kzima <sup>1.0</sup></li>\n                                 <li><a href=\"http://kzima.github.io/vuestrap-base-components/#/accordion\">VueStrap Base Components</a>, A complete set of Bootstrap 4 web components built with pure Vue.js, by @kzima <sup>1.0</sup></li>\n                                 <li><a href=\"https://github.com/kaorun343/vue-youtube-embed\">Vue YouTube Embed</a>: a directive for Vue.js and YouTube by @kaorun343</li>\n                                 <li><a href=\"https://github.com/hilongjw/vue-datepicker\">Vue datepicker</a>: calendar and datepicker component with material design for Vue.js by @hilongjw</li>\n                                 <li><a href=\"https://github.com/Bubblings/vue-date-picker\">vue-date-picker</a>: A simple datepicker component for Vue.js by @Bubblings</li>\n                                 <li><a href=\"https://github.com/greyby/vue-spinner\">vue-spinner</a>: A collection of loading spinners with Vue.js.</li>\n                                 <li><a href=\"https://github.com/eduardostuart/vue-image-loader\">vue-image-loader</a>: Async image loader for Vue.js by @eduardostuart</li>\n                                 <li><a href=\"https://github.com/hilongjw/vue-progressbar\">Vue-progressbar</a>: A lightweight progress bar for Vue.js by @hilongjw</li>\n                                 <li><a href=\"https://github.com/paulpflug/vue-clusterize\">vue-clusterize</a>: Invisible pagination / clusterize in vue</li>\n                                 <li><a href=\"https://github.com/irwansyahwii/Famous-Vue\">Famous-Vue</a>: Declarative Famous using Vue</li>\n                                 <li><a href=\"https://github.com/MopTym/vue-waterfall\">vue-waterfall</a>: A waterfall layout component for Vue.js by @MopTym</li>\n                                 <li><a href=\"https://github.com/haydenbbickerton/vue-charts\">vue-charts</a>: A Google Charts plugin for Vue.js by <a href=\"https://github.com/haydenbbickerton\">@haydenbbickerton</a></li>\n                                 <li><a href=\"https://github.com/paulpflug/vue-resize-handle\">vue-resize-handle</a>: Resize elements by dragging / uni and bidirectional</li>\n                                 <li><a href=\"https://github.com/airyland/vux\">vux</a>: Mobile web UI Components based on Vue and WeUI</li>\n                                 <li><a href=\"https://github.com/sagalbot/vue-select\">vue-select</a>: Simple component that implements Select2/Chosen style dropdowns with no dependencies<sup>1.0</sup></li>\n                                 <li><a href=\"https://github.com/hilongjw/vue-slide\">Vue-slide</a>: A lightweight slide component for Vue.js by @hilongjw</li>\n                                 <li><a href=\"https://github.com/CroudSupport/vue-quill\">Vue-quill</a>: A Vue component implementing the <a href=\"https://github.com/quilljs/quill.git\">Quill</a> text editor by @brockreece</li>\n                                 <li><a href=\"https://github.com/zxdong262/vue-pagenav\">vue-pagenav</a>: A vue pagenav plugin by <a href=\"https://github.com/zxdong262\">@zxdong262</a></li>\n                                 <li><a href=\"https://github.com/cucygh/vue-calendar\">Vue-calendar</a>: A vue calendar component with less code by cucygh</li>\n                                 <li><a href=\"http://appcomponents.org/material-components/\">Vue Material Components</a>: Vue.js UI components using <a href=\"http://materializecss.com/\">materializecss.com</a> by mjanys</li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-autocomplete\">vue-autocomplete</a> Autocomplete Component for Vue by <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-loading-bar\">vue-loading-bar</a> Youtube Like Loading Bar Component for Vue by <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-i18n\" class=\"anchor\" href=\"#i18n\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>i18n</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/kazupon/vue-i18n\">vue-i18n</a>: Internationalization plugin.</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-i18n\">vue-i18n</a>: A plugin providing a global interface used to localize internationalized messages used in the</li>\n                                 <li><a href=\"https://github.com/sebastian-software/vue-locale\">vue-locale</a>: Advanced localization support for VueJS</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-examples\" class=\"anchor\" href=\"#examples\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Examples</h4>\n                             <ul>\n                                 <li><a href=\"http://forum.vuejs.org/topic/39/starter-application-with-jwt-auth-sample-backend-api\">Starter Application with JWT Auth + sample backend API in Laravel</a></li>\n                                 <li><a href=\"https://github.com/brandonjpierce/node-webkit-boilerplate\">Node Webkit + Vue example</a> by @brandonjpierce</li>\n                                 <li><a href=\"https://github.com/superlloyd/VueSamples\">Vue Samples</a> by @superlloyd</li>\n                                 <li><a href=\"https://github.com/kazupon/vue-router-hackernews\">HackerNews clone with vue.js + vue-router</a> by @kazupon</li>\n                                 <li><a href=\"https://github.com/bradstewart/electron-boilerplate-vue\">Electron + Vue example</a> by @bradstewart</li>\n                                 <li><a href=\"https://github.com/inca/voie-example\">Single page application example (Vue + Voie)</a> by <a href=\"https://github.com/inca\">Boris Okunskiy</a></li>\n                                 <li><a href=\"https://github.com/rajabishek/begin\">Begin - Task Manager SPA written in Vue + Lumen</a> by <a href=\"https://github.com/rajabishek\">Raj Abishek</a></li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-mini-shop\">Vue Mini Shop</a> by <a href=\"https://github.com/BosNaufal\">BosNaufal</a></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-boilerplates\" class=\"anchor\" href=\"#boilerplates\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Boilerplates</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/kazupon/vue-plugin-boilerplate\">Boilerplate for Vue.js plugin </a> by @kazupon</li>\n                                 <li><a href=\"https://github.com/rodzzlessa24/vue-electron\">Boilerplate for Vue.js &amp; Atom Electron </a> by @rodzzlessa24</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-scaffolding\" class=\"anchor\" href=\"#scaffolding\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Scaffolding</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vue-cli\">vue-cli</a>: official CLI for scaffolding Vue.js projects.</li>\n                                 <li><a href=\"https://github.com/BirdEggegg/generator-vue\">Vue generator</a>: a simple yeoman generator for Vue by @BirdEggegg</li>\n                                 <li><a href=\"https://github.com/jfelsinger/generator-venm\">VENM stack yeoman generator</a> by @jfelsinger</li>\n                                 <li><a href=\"https://github.com/mustardamus/generator-grail\">Grail Yeoman Generator</a>: a advanced yeoman generator for a modern modular one page web app, extendable with Vue.js alongside other nice tools</li>\n                                 <li><a href=\"https://github.com/egoist/vuepack\">VuePack</a>: A modern starter for Vue and Webpack by @egoist</li>\n                                 <li><a href=\"https://github.com/rodzzlessa24/vue-webgulp\">VueWebgulp</a>: A skeleton app using Vuejs, Gulp, and Webpack by @rodzzlessa24</li>\n                                 <li><a href=\"https://github.com/scottbedard/oc-vuetober-theme\">Vuetober</a>: SPA scaffolding for October CMS</li>\n                                 <li><a href=\"https://github.com/rodzzlessa24/vue-go-cli\">vue-go-cli</a> - a CLI tool for scaffolding new projects generating components, services, and mixins.</li>\n                                 <li><a href=\"https://github.com/nblackburn/brunch-with-vue\">Brunch with Vue</a> - A skeleton application utilizing vue, vuex, vue-resource and vue-router.</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-integrations\" class=\"anchor\" href=\"#integrations\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Integrations</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/zhouzhuojie/meteor-vue\">Vue for Meteor</a> by @zhouzhuojie</li>\n                                 <li><a href=\"https://github.com/fancellu/scalajs-vue\">ScalaJS bindings for Vue.js</a> by @fancellu</li>\n                                 <li><a href=\"https://github.com/Socketize/vue.js-plugin\">Socketize Backend</a>: Sync your model data to Socketize backend automatically. By <a href=\"https://github.com/Socketize\">@Socketize</a></li>\n                                 <li><a href=\"https://github.com/Grottolabs/vue-meteor-data\">Vue-Meteor-Data</a> Two-way-reactivity mixin for Vue and Meteor by @JakobRosenberg</li>\n                                 <li><a href=\"https://github.com/kaorun343/vue-property-decorator\">Vue Proerty Decorator</a>: Property Decorators for Vue.js by @kaorun343</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-general-pluginsdirectives\" class=\"anchor\" href=\"#general-pluginsdirectives\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>General Plugins/Directives</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vue-element\">vue-element</a>: Register real custom elements with Vue.</li>\n                                 <li><a href=\"https://github.com/vuejs/vue-touch\">vue-touch</a>: Hammer.js wrapper directives for touch gestures. (Updated for 1.0!)</li>\n                                 <li><a href=\"https://github.com/vuejs/vue-animated-list\">vue-animated-list</a>: A Vue.js plugin for easily animating <code>v-for</code> rendered lists.</li>\n                                 <li><a href=\"https://github.com/lithiumjake/vue-placeholders\">Vue placeholder directives</a> by @lithiumjake</li>\n                                 <li><a href=\"https://github.com/holic/vue-viewport\">Vue in viewport detection directive</a> by @holic</li>\n                                 <li><a href=\"https://github.com/kewah/vue-once\">Vue once directive</a> by @kewah</li>\n                                 <li><a href=\"https://github.com/KyleRoss/vue-modified\">Vue Modified Directive</a> by @KyleRoss</li>\n                                 <li><a href=\"https://github.com/mark-hahn/vue-keep-scroll\">Maintain scroll position on page changes</a> by @mark-hahn</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-titlecase\">vue-titlecase</a>: A plugin providing a global filter and an instance method used to titlecase (different from capitalize) strings. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-format\">vue-format</a>: A plugin providing a global filter and an instance method used to format messages with arguments. By @Haixing-Hu application. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/simplesmiler/vue-clickaway\">vue-clickaway</a>: Assign a method to be called whenever user clicks away from the element. By @simplesmiler</li>\n                                 <li><a href=\"https://github.com/simplesmiler/vue-focus\">vue-focus</a>: Manage input focus in the MVVM-friendly way. By @simplesmiler</li>\n                                 <li><a href=\"https://github.com/rhyzx/vue-transfer-dom\">vue-transfer-dom</a>: Transfer DOM to another location. by @rhyzx</li>\n                                 <li><a href=\"https://github.com/hilongjw/vue-lazyload\">vue-lazyload</a>: lazyloading images. by @hilongjw</li>\n                                 <li><a href=\"https://github.com/didierfranc/v-touch\">v-touch</a>: The easiest way to use Hammer.js with Vue.js and use touch gestures. by <a href=\"https://github.com/didierfranc\">@didierfranc</a> <sup>Vue.js 1.x</sup></li>\n                                 <li><a href=\"https://github.com/paulpflug/vue-mixins\">vue-mixins</a> A collection of mixins aimed to replace some jQuery functionality</li>\n                                 <li><a href=\"https://github.com/paulpflug/vue-filters\">vue-filters</a> A collection of filters</li>\n                                 <li><a href=\"https://github.com/rascada/vue-round-filter\">vue-round-filter</a> filter for rounding with whichever decimal accuracy</li>\n                                 <li><a href=\"https://github.com/TahaSh/vue-paginate\">vue-paginate</a> A simple plugin to use pagination in vue.js. by @TahaSh</li>\n                                 <li><a href=\"https://github.com/rpkilby/vue-super\">vue-super</a> A simple plugin to call methods on parent components.</li>\n                                 <li><a href=\"https://github.com/arexio/vue-deepstream\">vue-deepstream</a> Plugin to simplify event subscription and event trigger when using <a href=\"https://deepstream.io/\">deepstream.io</a></li>\n                                 <li><a href=\"https://github.com/Coffcer/vue-plain\">vue-plain</a> Plugin to get plain object from vue getter/setter object.</li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-calc-input\">vue-calc-input</a> Vue directive to make a calculator input behavior by <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-move-dom\">vue-move-dom</a> Vue Directive to move the DOM without losing all the VM data, event, etc. by <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                             </ul>\n                         </li>\n                     </ul>\n\n                 </ul>\n             </div>\n         </div>\n    </div>\n</div>\n\n\n    <hr>\n\n    <!-- Footer -->\n    <footer>\n        <div class=\"row\">\n            <div class=\"col-lg-12\">\n                <p>Copyright © Your Website 2014</p>\n            </div>\n        </div>\n        <!-- /.row -->\n    </footer>\n\n</div>\n<!-- /.container -->\n\n\n\n"
+;(typeof module.exports === "function"? module.exports.options: module.exports).template = "\n\n <!-- Page Content -->\n<div class=\"container\">\n\n<!-- Page Header -->\n\n<!-- /.row -->\n<div class=\"row\">\n    <div class=\"col-lg-12\">\n\n        <div class=\"row\">\n            <div class=\"col-lg-6\">\n                 <h1 class=\"page-header\">Home\n                    <small>{{ text | locale 'title' }}!</small>\n                 </h1>\n\n                <blockquote>\n                    <p> {{ text | locale 'sometext' }} </p>\n                </blockquote>\n\n                <pre>{{ $data | json }}</pre>\n                <pre>{{ longlocale | json }}</pre>\n                <pre>{{ shortlocale | json }}</pre>\n            </div>\n\n             <div class=\"col-lg-6\">\n                 <div class=\"embed-responsive embed-responsive-16by9\">\n                 </div>\n             </div>\n         </div>\n\n\n\n         <div class=\"row\">\n             <div class=\"col-lg-6\">\n                 <ul>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#official-resources\">Official Resources</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#external-resources\">External Resources</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#community\">Community</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#podcasts\">Podcasts</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#official-examples\">Official Examples</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#tutorials\">Tutorials</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#development-tools\">Development Tools</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#syntax-highlighting\">Syntax Highlighting</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#snippets\">Snippets</a></li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#libraries--plugins\">Libraries &amp; Plugins</a>\n                         <ul>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#routing\">Routing</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#ajaxdata\">Ajax/Data</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#state-management\">State Management</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#validation\">Validation</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#ui-components\">UI Components</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#i18n\">i18n</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#examples\">Examples</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#boilerplates\">Boilerplates</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#scaffolding\">Scaffolding</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#integrations\">Integrations</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#general-pluginsdirectives\">General Plugins/Directives</a></li>\n                         </ul>\n                     </li>\n                     <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#projects-using-vuejs\">Projects Using Vue.js</a>\n                         <ul>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#open-source\">Open Source</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#appswebsites\">Apps/Websites</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#interactive-experiences\">Interactive Experiences</a></li>\n                             <li><a target=\"_newtab\" href=\"https://github.com/vuejs/awesome-vue#enterprise-usage\">Enterprise Usage</a></li>\n                         </ul>\n                     </li>\n                     <h3><a id=\"user-content-official-resources\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#official-resources\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Official Resources</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"http://vuejs.org/guide/\">Official Guide</a></li>\n                         <li><a target=\"_newtab\" href=\"http://vuejs.org/api/\">API Reference</a></li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue\">GitHub Repo</a></li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue/releases\">Release Notes</a></li>\n                     </ul>\n                     <h3><a id=\"user-content-external-resources\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#external-resources\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>External Resources</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://gist.github.com/hashrock/f575928d0e109ace9ad0\">Vue.js資料まとめ(for japanese)</a> by @hashrock</li>\n                     </ul>\n                     <h3><a id=\"user-content-community\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#community\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Community</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://twitter.com/vuejs\">Twitter</a></li>\n                         <li><a target=\"_newtab\" href=\"https://gitter.im/vuejs/vue\">Gitter Chat Room</a></li>\n                         <li><a target=\"_newtab\" href=\"http://forum.vuejs.org/\">Official Forum</a></li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/simplesmiler/vue-requests\">vue-requests</a> - Request a Vue.js module you wish existed or get ideas for modules</li>\n                     </ul>\n                     <h3><a id=\"user-content-podcasts\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#podcasts\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Podcasts</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"http://www.fullstackradio.com/30\">Full Stack Radio #30 (11-23-2015)</a></li>\n                         <li><a target=\"_newtab\" href=\"https://devchat.tv/js-jabber/187-jsj-vue-js-with-evan-you\">JavaScript Jabber #187 (11-25-2015)</a></li>\n                         <li><a target=\"_newtab\" href=\"https://changelog.com/184/\">Changelog #184 (11-27-2015)</a></li>\n                         <li><a target=\"_newtab\" href=\"http://softwareengineeringdaily.com/2015/12/29/front-end-javascript-with-evan-you/\">Software Engineering Daily (12-29-2015)</a></li>\n                         <li><a target=\"_newtab\" href=\"https://javascriptair.com/episodes/2016-03-30/\">Javascript Air 016 (03-30-2016)</a></li>\n                     </ul>\n                     <h3><a id=\"user-content-official-examples\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#official-examples\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Official Examples</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"http://vuejs.org/guide/\">Basic Examples</a></li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue/tree/dev/examples/todomvc\">Vue.js TodoMVC</a>\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/anfelor/TodoMVC-CoffeeScript-and-Vue.js\">CoffeeScript Version</a></li>\n                             </ul>\n                         </li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-hackernews\">Vue.js HackerNews Clone</a></li>\n                     </ul>\n                     <h3><a id=\"user-content-tutorials\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#tutorials\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Tutorials</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://laracasts.com/series/learning-vue-step-by-step\">Vue.js screencasts</a> on Laracasts</li>\n                         <li><a target=\"_newtab\" href=\"http://www.sitepoint.com/whats-new-in-vue-js-1-0/\">What's New in Vue.js 1.0</a> on Sitepoint</li>\n                         <li><a target=\"_newtab\" href=\"https://auth0.com/blog/2015/11/13/build-an-app-with-vuejs/\">Build an App with Vue.js: From Authentication to Calling an API</a> on Auth0 blog</li>\n                         <li><a target=\"_newtab\" href=\"https://scotch.io/tutorials/create-a-github-file-explorer-using-vue-js\">Create a GitHub File Explorer Using Vue.js</a> on Scotch.io</li>\n                         <li><a target=\"_newtab\" href=\"http://vegibit.com/vue-js-tutorial/\">Vue.js Tutorial</a> on Vegibit</li>\n                         <li><a target=\"_newtab\" href=\"http://skyronic.com/2015/12/28/vue-project-scratch/\">Vue.js build set-up from scratch with webpack, vue-loader and hot reload</a></li>\n                         <li><a target=\"_newtab\" href=\"http://skyronic.com/2016/01/03/vuex-basics-tutorial/\">Vuex basics: Tutorial and explanation</a></li>\n                         <li><a target=\"_newtab\" href=\"https://www.youtube.com/watch?v=l1KHL-TX3qs\">Vuex introduction video - James Browne from London Vue.js Meetup #1</a></li>\n                         <li><a target=\"_newtab\" href=\"https://laravist.com/series/vue-js-1-0-in-action-series\">Vue.js 中文系列视频教程</a> on Laravist</li>\n                         <li><a target=\"_newtab\" href=\"http://coligo.io/vuejs-the-basics/\">Vue.js: The Basics</a> on Coligo.io</li>\n                         <li><a target=\"_newtab\" href=\"http://coligo.io/vuejs-components\">Practical Intro to Components in Vue.js</a> on Coligo.io</li>\n                         <li><a target=\"_newtab\" href=\"http://craigmckenna.com/develop-a-reactive-invoice-app-using-vue-js/\">Develop a Reactive Invoice App using Vue.js</a> on craigmckenna.com</li>\n                         <li><a target=\"_newtab\" href=\"http://coligo.io/vuejs-filters/\">Understanding Filters in Vue.js</a> on Coligo.io</li>\n                         <li><a target=\"_newtab\" href=\"https://www.youtube.com/watch?v=TGSJjDahlrQ\">Hybrid App Example with Laravel and Vue.js in portuguese</a> by @vedovelli</li>\n                         <li><a target=\"_newtab\" href=\"http://coligo.io/markdown-editor-vuejs/\">Creating a Markdown Editor with VueJs and GitHub's API</a> on Coligo.io</li>\n                         <li><a target=\"_newtab\" href=\"http://coligo.io/real-time-analytics-with-nodejs-socketio-vuejs/\">Building a Real-Time Web Analytics Dashboard with NodeJs, Socket.io, and VueJs</a> on Coligo.io</li>\n                         <li><a target=\"_newtab\" href=\"http://oguzhan.in/vue-js-ile-uygulama-gelistirme/\">Vue.js Introduction Turkish Language</a> on oguzhan.in</li>\n                     </ul>\n                     <h4><a id=\"user-content-012-and-earlier\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#012-and-earlier\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>0.12 and earlier</h4>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://laracasts.com/series/learning-vuejs\">Vue.js screencasts</a> on Laracasts <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"https://scotch.io/tutorials/build-an-app-with-vue-js-a-lightweight-alternative-to-angularjs\">Build an App with Vue.js</a> on Scotch.io <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://www.sitepoint.com/getting-started-with-vue-js/\">Getting Started with Vue.js</a> on Sitepoint <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://forum.vuejs.org/topic/49/vue-js-video-series-in-portuguese\">Vue.js video series in portuguese</a> <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://ausite.ru/category/js/vue-js\">Vue.js video series in russian</a> on Ausite <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://mattsparks.com/a-quick-introduction-to-vue-js/\">A Quick Introduction to Vue.js</a> by Matt Sparks <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"https://www.youtube.com/watch?v=QN7l3ydXvx0\">Getting Started with Vue.js + vue-router</a> by Michael Calkins <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://taha-sh.com/blog/many-js-frameworks-but-vuejs-is-different\">Many JS Frameworks but Vue.js Is Different</a> by Taha Shashtari <sup>0.12</sup></li>\n                         <li><a target=\"_newtab\" href=\"http://fadeit.dk/blog/post/getting-started-with-vuejs-angularjs-perspective\">Getting Started with Vue.js - AngularJS perspective</a> by Dan Mindru <sup>0.11</sup></li>\n                     </ul>\n                     <h3><a id=\"user-content-development-tools\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#development-tools\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Development Tools</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-cli\">vue-cli</a>: official CLI for scaffolding Vue.js projects.</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-loader\">vue-loader</a> - Vue component loader for Webpack.\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-loader-example\">vue-loader-example</a></li>\n                             </ul>\n                         </li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vueify\">vueify</a> - Vue component transform for Browserify.\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vueify-example\">vueify-example</a></li>\n                             </ul>\n                         </li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-devtools\">vue-devtools</a> - Chrome devtools extension for debugging Vue applications.</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/SkewedAspect/grunt-vueify\">grunt-vueify</a> - Translate <code>.vue</code> files to pure JavaScript, without using Browserify. (Useful for Electron apps)</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/paulpflug/vue-compiler\">vue-compiler</a> - A simple CLI wrapper around vueify</li>\n                         <li><a target=\"_newtab\" href=\"https://atom.io/packages/vue-autocompile\">vue-autocompile</a> - Atom.io package to compile <code>.vue</code> files on save.</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/paulpflug/vue-dev-server\">vue-dev-server</a> - A small webpack-based development server for building standalone <code>vue</code> components</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/rodzzlessa24/vue-go-cli\">vue-go-cli</a> - a CLI tool for scaffolding new projects generating components, services, and mixins.</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/nblackburn/vue-brunch\">brunch-vue</a> - Adds support to Brunch for pre-compiling single file Vue components.</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/rawcreative/vueify-extract-css\">vueify-extract-css</a> - Browserify plugin to extract css from Vueify-compiled single file components to a separate css file.</li>\n                     </ul>\n                     <h3><a id=\"user-content-syntax-highlighting\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#syntax-highlighting\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Syntax Highlighting</h3>\n                     <ul>\n                         <li><a target=\"_newtab\" href=\"https://github.com/vuejs/vue-syntax-highlight\">Sublime Text</a></li>\n                         <li><a target=\"_newtab\" href=\"https://atom.io/packages/language-vue\">Atom</a> by @hedefalk</li>\n                         <li><a target=\"_newtab\" href=\"https://atom.io/packages/language-vue-component\">Atom (2)</a> by @CYBAI</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/posva/vim-vue\">Vim</a> by @darthmall and @posva</li>\n                         <li><a target=\"_newtab\" href=\"https://marketplace.visualstudio.com/items/liuji-jim.vue\">Visual Studio Code</a> by Jim Liu</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/pandao/brackets-vue\">Brackets</a> by @pandao</li>\n                         <li><a target=\"_newtab\" href=\"https://github.com/henjue/vue-for-idea\">IntelliJ IDEA / WebStorm</a> by @henjue</li>\n                     </ul>\n                     <h3><a id=\"user-content-projects-using-vuejs\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#projects-using-vuejs\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Projects Using Vue.js</h3>\n                     <ul>\n                         <li>\n                             <h4><a id=\"user-content-open-source\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#open-source\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Open Source</h4>\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"http://pagekit.com/\">PageKit</a> <sup><a target=\"_newtab\" href=\"https://github.com/pagekit/pagekit\">[Source]</a></sup></li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/laravel/spark\">Laravel Spark</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://p5js.org/download/\">p5.js editor</a> <sup><a target=\"_newtab\" href=\"https://github.com/processing/p5.js-editor\">[Source]</a></sup></li>\n                                 <li><a target=\"_newtab\" href=\"https://python-china.org\">Python China</a> <sup><a target=\"_newtab\" href=\"https://github.com/zerqu/qingcheng\">[Source]</a></sup></li>\n                                 <li><a target=\"_newtab\" href=\"http://npmcharts.com\">npmcharts.com</a> <sup><a target=\"_newtab\" href=\"https://github.com/cheapsteak/npmcharts.com\">[Source]</a></sup></li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/jiyinyiyong/todolist\">Todolist</a> by @jiyinyiyong</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/thelinuxlich/vue-dashing-js\">Dashboard framework</a> by @thelinuxlich</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/sapjax/fewords\">a simple notepad</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/ilyashubin/FilterBlend\">FilterBlend</a>: CSS blend modes and filters playground by @ilyashubin</li>\n                                 <li><a target=\"_newtab\" href=\"http://koel.phanan.net\">Koel</a>: Music streaming server</li>\n                                 <li><a target=\"_newtab\" href=\"https://chrome.google.com/webstore/detail/ikhdkkncnoglghljlkmcimlnlhkeamad\">Selection Translator</a> <sup><a target=\"_newtab\" href=\"https://github.com/lmk123/crx-selection-translate\">[Source]</a></sup> A Chrome Extension let browse any language websites has never been easier.</li>\n                                 <li><a target=\"_newtab\" href=\"https://oldj.github.io/SwitchHosts/\">SwitchHosts</a> <sup><a target=\"_newtab\" href=\"https://github.com/oldj/SwitchHosts\">[Source]</a></sup> Switch hosts quickly.</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/mrgodhani/rss-reader\">RSS Reader</a> Simple RSS Reader made using atom electron and vue.js.</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/Zhangdroid/Gokotta\">Gokotta</a>: A simple music player built by electron and vue.</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/Kocisov/coffeebreak\">Coffeebreak</a> Tool for live editing CSS components</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-appswebsites\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#appswebsites\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Apps/Websites</h4>\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"https://www.formlets.com\">Formlets</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://laracasts.com\">Laracasts</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://register.sainsburysentertainment.co.uk/\">Sainsbury's Entertainment onboarding platform</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://cuusoo.com\">CUUSOO</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://esa.io/\">esa.io</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://n1.ru\">N1.ru</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://gold.xitu.io\">稀土掘金</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://www.prague-airport.com/\">Prague Airport</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://www.expressionery.com\">Expressionery</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://bt.workswell.com.au\">BUYIT</a> by @<a target=\"_newtab\" href=\"http://workswell.com.au\">Workswell Australia</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://corentinbac.com/\">Portfolio Site</a> by Corentin Bac</li>\n                                 <li><a target=\"_newtab\" href=\"https://play.google.com/store/apps/details?id=uk.co.dixons.compareprices&amp;hl=en\">Compare Prices by Currys &amp; PCWorld</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://grammarly.com/\">Grammarly</a> mistake-free writing service</li>\n                                 <li><a target=\"_newtab\" href=\"https://laravist.com/\">Laravist</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://atiiv.com\">Atiiv</a> An app aimed for personal trainers and their clients.</li>\n                                 <li><a target=\"_newtab\" href=\"http://v2.statamic.com\">Statamic</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://embalses.azurewebsites.net/\">Embalses!</a> A tool to report water dam level using the U.S. Geological Survey database.</li>\n                                 <li><a target=\"_newtab\" href=\"http://clem.travelmap.fr\">TravelMap</a> A simple way for travellers to create a blog based on a Map</li>\n                                 <li><a target=\"_newtab\" href=\"http://movienote.org\">movienote.org</a> A app which help users maintaining a list about what movie they have watched.</li>\n                                 <li><a target=\"_newtab\" href=\"https://propercloth.com/design-a-shirt\">Proper Cloth Shirt Builder</a> Custom shirt builder</li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/julesbou/checkit\">CheckIt</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://github.com/Mati365/reddit-news\">Reddit News</a> A browser extension which show notifications and news from reddit</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-interactive-experiences\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#interactive-experiences\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Interactive Experiences</h4>\n                             <ul>\n                                 <li><a target=\"_newtab\" href=\"https://newsfeed.fb.com/\">Facebook NewsFeed</a></li>\n                                 <li><a target=\"_newtab\" href=\"https://adblitz.withyoutube.com/#!/advertisers\">YouTube AdBlitz 2016</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://bloodsweatandtools.discovery.ca/gamebench/\">Blood, Sweat and Tools</a> - by Jam3, led by @cheapsteak</li>\n                                 <li><a target=\"_newtab\" href=\"http://omnisense.net\">Omnisense Experience</a> - <em>Awwwards &amp; FWA SOTD, FWA Cutting Edge. Awwwards SOTM nominee.</em></li>\n                                 <li><a target=\"_newtab\" href=\"https://danslapeaudelours.canalplus.fr/en/\">Being the Bear</a> - <em>Awwwards &amp; FWA SOTD, FWA Cutting Edge, Awwwards SOTM nominee.</em></li>\n                                 <li><a target=\"_newtab\" href=\"http://www.starexperience.fr/\">Heineken Star Experience</a> - <em>FWA SOTD.</em></li>\n                                 <li><a target=\"_newtab\" href=\"http://louisansa.com\">Louis Ansa Website (portfolio)</a> - <em>Awwwards SOTD, FWA nominee.</em></li>\n                                 <li><a target=\"_newtab\" href=\"http://www.digitalforallnow.com/en/experience\">Digital For All</a></li>\n                                 <li><a target=\"_newtab\" href=\"http://www.djeco.com/en\">Djeco.com</a></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-enterprise-usage\" class=\"anchor\" href=\"https://github.com/vuejs/awesome-vue#enterprise-usage\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Enterprise Usage</h4>\n                             <ul>\n                                 <li>Alibaba</li>\n                                 <li>Baidu</li>\n                                 <li>Sina Weibo</li>\n                                 <li>Xiaomi</li>\n                                 <li>Ele.me</li>\n                                 <li>Optimizely</li>\n                                 <li>Expedia</li>\n                                 <li>UCWeb</li>\n                                 <li>Line</li>\n                                 <li>Nintendo</li>\n                                 <li>Celtra</li>\n                                 <li>Sainsbury's</li>\n                                 <li><a target=\"_newtab\" href=\"https://arex.io/\">AREX</a></li>\n                             </ul>\n                         </li>\n                     </ul>\n                 </ul>\n             </div>\n             <div class=\"col-lg-6\">\n                 <ul>\n\n                     <h3><a id=\"user-content-libraries--plugins\" class=\"anchor\" href=\"#libraries--plugins\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Libraries &amp; Plugins</h3>\n                     <ul>\n                         <li>\n                             <h4><a id=\"user-content-routing\" class=\"anchor\" href=\"#routing\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Routing</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vue-router\">vue-router</a> - Official router for building SPAs. <sup>1.0 compatible</sup></li>\n                                 <li><a href=\"https://github.com/molforp/vue-view\">Vue view</a>, ui-router inspired routes (with states), based on pagejs by @molforp</li>\n                                 <li><a href=\"https://github.com/AlexToudic/vue-page\">Vue page</a>, a routing system based on pagejs by @AlexToudic</li>\n                                 <li><a href=\"https://github.com/bpierre/vue-lanes\">Vue Lanes</a>, an event-based routing system for Vue by @bpierre</li>\n                                 <li><a href=\"https://github.com/ayamflow/vue-route\">Vue route</a>, ng-view inspired routes for Vue by @ayamflow</li>\n                                 <li><a href=\"https://github.com/inca/voie\">voie</a> — simple router / layout manager inspired by FSMs and ui-router by <a href=\"https://github.com/inca\">Boris Okunskiy</a><sup>1.0</sup></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-ajaxdata\" class=\"anchor\" href=\"#ajaxdata\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Ajax/Data</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vue-resource\">vue-resource</a> - AJAX/Resource plugin maintained by the <a href=\"http://pagekit.com/\">PageKit</a> team. <sup>1.0 compatible</sup></li>\n                                 <li><a href=\"https://github.com/vuejs/vue-async-data\">vue-async-data</a> - Async data loading plugin <sup>1.0 compatible</sup></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-state-management\" class=\"anchor\" href=\"#state-management\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>State Management</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vuex\">vuex</a> - Flux/Redux inspired application architecture for Vue.js.</li>\n                                 <li><a href=\"https://github.com/egoist/revue\">revue</a> - Redux binding for Vue by @egoist</li>\n                                 <li><a href=\"https://github.com/yang-wei/vue-redux\">vue-redux</a> - Redux binding for Vue by @yang-wei</li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-freeze\">vue-freeze</a> - Simple state management whitout bloating API and Concept for Vue by <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-simple-store\">vue-simple-store</a> - Store Organizer To Simplify Your Stores for Vue By <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-validation\" class=\"anchor\" href=\"#validation\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Validation</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vue-validator\">vue-validator</a> - Form validation plugin maintained by @kazupon <sup>1.0 compatible</sup></li>\n                                 <li><a href=\"https://github.com/xrado/vue-validator\">Vue validator</a> by @xrado</li>\n                                 <li><a href=\"https://github.com/fergaldoyle/vue-form\">vue-form</a> by @fergaldoyle <sup>1.0 compatible</sup></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-ui-components\" class=\"anchor\" href=\"#ui-components\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>UI Components</h4>\n                             <ul>\n                                 <li><a href=\"http://yuche.github.io/vue-strap/\">VueStrap</a>, Bootstrap components built with pure Vue.js by @yuche <sup>1.0</sup></li>\n                                 <li><a href=\"http://morgul.github.io/vueboot/\">VueBoot</a>, Bootstrap v4 components by @Morgul <sup>1.0</sup></li>\n                                 <li><a href=\"https://github.com/posva/vue-mdl\">vue-mdl</a>: Reusable Vue.js components using Material Design Lite. By <a href=\"https://github.com/posva\">@posva</a></li>\n                                 <li><a href=\"https://github.com/samcrosoft/vue-countup\">vue-countup</a>: A Vue.js component for the very interesting <a href=\"https://inorganik.github.io/countUp.js/\">CountUp.js</a> plugin. <sup>1.0 compatible</sup></li>\n                                 <li><a href=\"https://github.com/hnakamur/vue.tag-editor.js\">Vue Tag Editor Component</a> by @hnakamur</li>\n                                 <li><a href=\"http://pespantelis.github.io/vue-crop/\">Vue Crop</a></li>\n                                 <li><a href=\"http://pespantelis.github.io/vue-typeahead/\">Vue Typeahead</a></li>\n                                 <li><a href=\"https://github.com/dgerber/vue-select-js\">Typed select component</a> by @dgerber</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-select\">vue-select</a>: A Vue.js component implementing the select control with the <a href=\"https://github.com/select2/select2\">jQuery select2 plugin</a>. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-html-editor\">vue-html-editor</a>: A Vue.js component implementing the HTML editor with the <a href=\"https://github.com/summernote/summernote\">jQuery summernote plugin</a>. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-datetime-picker\">vue-datetime-picker</a>: A Vue.js component implementing the datetime picker control using the <a href=\"https://github.com/Eonasdan/bootstrap-datetimepicker\">Eonasdan's bootstrap datetime picker plugin</a>. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-country-select\">vue-country-select</a>: A Vue.js component implementing the select control used to select countries. It depends on <a href=\"https://github.com/Haixing-Hu/vue-select\">vue-select</a> and <a href=\"https://github.com/Haixing-Hu/vue-i18n\">vue-i18n</a>. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/dgerber/vue-formidable\">Form generation from JSON Schema</a> by @dgerber</li>\n                                 <li><a href=\"https://github.com/ericmcdaniel/vue-panel\">vue-panel</a>: A suite of Vue.js components for building Flexbox layouts by @ericmcdaniel</li>\n                                 <li><a href=\"https://github.com/GuillaumeLeclerc/vue-google-maps/\">vue-google-maps</a>: A suite of Vue.js components to build reactive Google Maps Applications by @GuillaumeLeclerc</li>\n                                 <li><a href=\"https://github.com/Twiknight/vue-transition\">vue-transition</a>: A component to trigger a CSS transition at any time by @Twiknight</li>\n                                 <li><a href=\"http://kzima.github.io/vuestrap-icons/#/icons\">SVG icons</a>, SVG sprites in form of a simple <code>&lt;icon&gt;</code> component, by @kzima <sup>1.0</sup></li>\n                                 <li><a href=\"http://gritcode.github.io/gritcode-components/#/toast\">Extra Vuestrap components</a>, more components built with just B4 and Vue.js, by @kzima <sup>1.0</sup></li>\n                                 <li><a href=\"http://kzima.github.io/vuestrap-base-components/#/accordion\">VueStrap Base Components</a>, A complete set of Bootstrap 4 web components built with pure Vue.js, by @kzima <sup>1.0</sup></li>\n                                 <li><a href=\"https://github.com/kaorun343/vue-youtube-embed\">Vue YouTube Embed</a>: a directive for Vue.js and YouTube by @kaorun343</li>\n                                 <li><a href=\"https://github.com/hilongjw/vue-datepicker\">Vue datepicker</a>: calendar and datepicker component with material design for Vue.js by @hilongjw</li>\n                                 <li><a href=\"https://github.com/Bubblings/vue-date-picker\">vue-date-picker</a>: A simple datepicker component for Vue.js by @Bubblings</li>\n                                 <li><a href=\"https://github.com/greyby/vue-spinner\">vue-spinner</a>: A collection of loading spinners with Vue.js.</li>\n                                 <li><a href=\"https://github.com/eduardostuart/vue-image-loader\">vue-image-loader</a>: Async image loader for Vue.js by @eduardostuart</li>\n                                 <li><a href=\"https://github.com/hilongjw/vue-progressbar\">Vue-progressbar</a>: A lightweight progress bar for Vue.js by @hilongjw</li>\n                                 <li><a href=\"https://github.com/paulpflug/vue-clusterize\">vue-clusterize</a>: Invisible pagination / clusterize in vue</li>\n                                 <li><a href=\"https://github.com/irwansyahwii/Famous-Vue\">Famous-Vue</a>: Declarative Famous using Vue</li>\n                                 <li><a href=\"https://github.com/MopTym/vue-waterfall\">vue-waterfall</a>: A waterfall layout component for Vue.js by @MopTym</li>\n                                 <li><a href=\"https://github.com/haydenbbickerton/vue-charts\">vue-charts</a>: A Google Charts plugin for Vue.js by <a href=\"https://github.com/haydenbbickerton\">@haydenbbickerton</a></li>\n                                 <li><a href=\"https://github.com/paulpflug/vue-resize-handle\">vue-resize-handle</a>: Resize elements by dragging / uni and bidirectional</li>\n                                 <li><a href=\"https://github.com/airyland/vux\">vux</a>: Mobile web UI Components based on Vue and WeUI</li>\n                                 <li><a href=\"https://github.com/sagalbot/vue-select\">vue-select</a>: Simple component that implements Select2/Chosen style dropdowns with no dependencies<sup>1.0</sup></li>\n                                 <li><a href=\"https://github.com/hilongjw/vue-slide\">Vue-slide</a>: A lightweight slide component for Vue.js by @hilongjw</li>\n                                 <li><a href=\"https://github.com/CroudSupport/vue-quill\">Vue-quill</a>: A Vue component implementing the <a href=\"https://github.com/quilljs/quill.git\">Quill</a> text editor by @brockreece</li>\n                                 <li><a href=\"https://github.com/zxdong262/vue-pagenav\">vue-pagenav</a>: A vue pagenav plugin by <a href=\"https://github.com/zxdong262\">@zxdong262</a></li>\n                                 <li><a href=\"https://github.com/cucygh/vue-calendar\">Vue-calendar</a>: A vue calendar component with less code by cucygh</li>\n                                 <li><a href=\"http://appcomponents.org/material-components/\">Vue Material Components</a>: Vue.js UI components using <a href=\"http://materializecss.com/\">materializecss.com</a> by mjanys</li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-autocomplete\">vue-autocomplete</a> Autocomplete Component for Vue by <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-loading-bar\">vue-loading-bar</a> Youtube Like Loading Bar Component for Vue by <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-i18n\" class=\"anchor\" href=\"#i18n\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>i18n</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/kazupon/vue-i18n\">vue-i18n</a>: Internationalization plugin.</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-i18n\">vue-i18n</a>: A plugin providing a global interface used to localize internationalized messages used in the</li>\n                                 <li><a href=\"https://github.com/sebastian-software/vue-locale\">vue-locale</a>: Advanced localization support for VueJS</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-examples\" class=\"anchor\" href=\"#examples\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Examples</h4>\n                             <ul>\n                                 <li><a href=\"http://forum.vuejs.org/topic/39/starter-application-with-jwt-auth-sample-backend-api\">Starter Application with JWT Auth + sample backend API in Laravel</a></li>\n                                 <li><a href=\"https://github.com/brandonjpierce/node-webkit-boilerplate\">Node Webkit + Vue example</a> by @brandonjpierce</li>\n                                 <li><a href=\"https://github.com/superlloyd/VueSamples\">Vue Samples</a> by @superlloyd</li>\n                                 <li><a href=\"https://github.com/kazupon/vue-router-hackernews\">HackerNews clone with vue.js + vue-router</a> by @kazupon</li>\n                                 <li><a href=\"https://github.com/bradstewart/electron-boilerplate-vue\">Electron + Vue example</a> by @bradstewart</li>\n                                 <li><a href=\"https://github.com/inca/voie-example\">Single page application example (Vue + Voie)</a> by <a href=\"https://github.com/inca\">Boris Okunskiy</a></li>\n                                 <li><a href=\"https://github.com/rajabishek/begin\">Begin - Task Manager SPA written in Vue + Lumen</a> by <a href=\"https://github.com/rajabishek\">Raj Abishek</a></li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-mini-shop\">Vue Mini Shop</a> by <a href=\"https://github.com/BosNaufal\">BosNaufal</a></li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-boilerplates\" class=\"anchor\" href=\"#boilerplates\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Boilerplates</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/kazupon/vue-plugin-boilerplate\">Boilerplate for Vue.js plugin </a> by @kazupon</li>\n                                 <li><a href=\"https://github.com/rodzzlessa24/vue-electron\">Boilerplate for Vue.js &amp; Atom Electron </a> by @rodzzlessa24</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-scaffolding\" class=\"anchor\" href=\"#scaffolding\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Scaffolding</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vue-cli\">vue-cli</a>: official CLI for scaffolding Vue.js projects.</li>\n                                 <li><a href=\"https://github.com/BirdEggegg/generator-vue\">Vue generator</a>: a simple yeoman generator for Vue by @BirdEggegg</li>\n                                 <li><a href=\"https://github.com/jfelsinger/generator-venm\">VENM stack yeoman generator</a> by @jfelsinger</li>\n                                 <li><a href=\"https://github.com/mustardamus/generator-grail\">Grail Yeoman Generator</a>: a advanced yeoman generator for a modern modular one page web app, extendable with Vue.js alongside other nice tools</li>\n                                 <li><a href=\"https://github.com/egoist/vuepack\">VuePack</a>: A modern starter for Vue and Webpack by @egoist</li>\n                                 <li><a href=\"https://github.com/rodzzlessa24/vue-webgulp\">VueWebgulp</a>: A skeleton app using Vuejs, Gulp, and Webpack by @rodzzlessa24</li>\n                                 <li><a href=\"https://github.com/scottbedard/oc-vuetober-theme\">Vuetober</a>: SPA scaffolding for October CMS</li>\n                                 <li><a href=\"https://github.com/rodzzlessa24/vue-go-cli\">vue-go-cli</a> - a CLI tool for scaffolding new projects generating components, services, and mixins.</li>\n                                 <li><a href=\"https://github.com/nblackburn/brunch-with-vue\">Brunch with Vue</a> - A skeleton application utilizing vue, vuex, vue-resource and vue-router.</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-integrations\" class=\"anchor\" href=\"#integrations\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>Integrations</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/zhouzhuojie/meteor-vue\">Vue for Meteor</a> by @zhouzhuojie</li>\n                                 <li><a href=\"https://github.com/fancellu/scalajs-vue\">ScalaJS bindings for Vue.js</a> by @fancellu</li>\n                                 <li><a href=\"https://github.com/Socketize/vue.js-plugin\">Socketize Backend</a>: Sync your model data to Socketize backend automatically. By <a href=\"https://github.com/Socketize\">@Socketize</a></li>\n                                 <li><a href=\"https://github.com/Grottolabs/vue-meteor-data\">Vue-Meteor-Data</a> Two-way-reactivity mixin for Vue and Meteor by @JakobRosenberg</li>\n                                 <li><a href=\"https://github.com/kaorun343/vue-property-decorator\">Vue Proerty Decorator</a>: Property Decorators for Vue.js by @kaorun343</li>\n                             </ul>\n                         </li>\n                         <li>\n                             <h4><a id=\"user-content-general-pluginsdirectives\" class=\"anchor\" href=\"#general-pluginsdirectives\" aria-hidden=\"true\"><svg aria-hidden=\"true\" class=\"octicon octicon-link\" height=\"16\" version=\"1.1\" viewBox=\"0 0 16 16\" width=\"16\"><path d=\"M4 9h1v1h-1c-1.5 0-3-1.69-3-3.5s1.55-3.5 3-3.5h4c1.45 0 3 1.69 3 3.5 0 1.41-0.91 2.72-2 3.25v-1.16c0.58-0.45 1-1.27 1-2.09 0-1.28-1.02-2.5-2-2.5H4c-0.98 0-2 1.22-2 2.5s1 2.5 2 2.5z m9-3h-1v1h1c1 0 2 1.22 2 2.5s-1.02 2.5-2 2.5H9c-0.98 0-2-1.22-2-2.5 0-0.83 0.42-1.64 1-2.09v-1.16c-1.09 0.53-2 1.84-2 3.25 0 1.81 1.55 3.5 3 3.5h4c1.45 0 3-1.69 3-3.5s-1.5-3.5-3-3.5z\"></path></svg></a>General Plugins/Directives</h4>\n                             <ul>\n                                 <li><a href=\"https://github.com/vuejs/vue-element\">vue-element</a>: Register real custom elements with Vue.</li>\n                                 <li><a href=\"https://github.com/vuejs/vue-touch\">vue-touch</a>: Hammer.js wrapper directives for touch gestures. (Updated for 1.0!)</li>\n                                 <li><a href=\"https://github.com/vuejs/vue-animated-list\">vue-animated-list</a>: A Vue.js plugin for easily animating <code>v-for</code> rendered lists.</li>\n                                 <li><a href=\"https://github.com/lithiumjake/vue-placeholders\">Vue placeholder directives</a> by @lithiumjake</li>\n                                 <li><a href=\"https://github.com/holic/vue-viewport\">Vue in viewport detection directive</a> by @holic</li>\n                                 <li><a href=\"https://github.com/kewah/vue-once\">Vue once directive</a> by @kewah</li>\n                                 <li><a href=\"https://github.com/KyleRoss/vue-modified\">Vue Modified Directive</a> by @KyleRoss</li>\n                                 <li><a href=\"https://github.com/mark-hahn/vue-keep-scroll\">Maintain scroll position on page changes</a> by @mark-hahn</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-titlecase\">vue-titlecase</a>: A plugin providing a global filter and an instance method used to titlecase (different from capitalize) strings. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/Haixing-Hu/vue-format\">vue-format</a>: A plugin providing a global filter and an instance method used to format messages with arguments. By @Haixing-Hu application. By @Haixing-Hu</li>\n                                 <li><a href=\"https://github.com/simplesmiler/vue-clickaway\">vue-clickaway</a>: Assign a method to be called whenever user clicks away from the element. By @simplesmiler</li>\n                                 <li><a href=\"https://github.com/simplesmiler/vue-focus\">vue-focus</a>: Manage input focus in the MVVM-friendly way. By @simplesmiler</li>\n                                 <li><a href=\"https://github.com/rhyzx/vue-transfer-dom\">vue-transfer-dom</a>: Transfer DOM to another location. by @rhyzx</li>\n                                 <li><a href=\"https://github.com/hilongjw/vue-lazyload\">vue-lazyload</a>: lazyloading images. by @hilongjw</li>\n                                 <li><a href=\"https://github.com/didierfranc/v-touch\">v-touch</a>: The easiest way to use Hammer.js with Vue.js and use touch gestures. by <a href=\"https://github.com/didierfranc\">@didierfranc</a> <sup>Vue.js 1.x</sup></li>\n                                 <li><a href=\"https://github.com/paulpflug/vue-mixins\">vue-mixins</a> A collection of mixins aimed to replace some jQuery functionality</li>\n                                 <li><a href=\"https://github.com/paulpflug/vue-filters\">vue-filters</a> A collection of filters</li>\n                                 <li><a href=\"https://github.com/rascada/vue-round-filter\">vue-round-filter</a> filter for rounding with whichever decimal accuracy</li>\n                                 <li><a href=\"https://github.com/TahaSh/vue-paginate\">vue-paginate</a> A simple plugin to use pagination in vue.js. by @TahaSh</li>\n                                 <li><a href=\"https://github.com/rpkilby/vue-super\">vue-super</a> A simple plugin to call methods on parent components.</li>\n                                 <li><a href=\"https://github.com/arexio/vue-deepstream\">vue-deepstream</a> Plugin to simplify event subscription and event trigger when using <a href=\"https://deepstream.io/\">deepstream.io</a></li>\n                                 <li><a href=\"https://github.com/Coffcer/vue-plain\">vue-plain</a> Plugin to get plain object from vue getter/setter object.</li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-calc-input\">vue-calc-input</a> Vue directive to make a calculator input behavior by <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                                 <li><a href=\"https://github.com/BosNaufal/vue-move-dom\">vue-move-dom</a> Vue Directive to move the DOM without losing all the VM data, event, etc. by <a href=\"https://github.com/BosNaufal\">@BosNaufal</a></li>\n                             </ul>\n                         </li>\n                     </ul>\n\n                 </ul>\n             </div>\n         </div>\n    </div>\n</div>\n\n\n</div>\n<!-- /.container -->\n\n\n\n"
 if (module.hot) {(function () {  module.hot.accept()
   var hotAPI = require("vue-hot-reload-api")
   hotAPI.install(require("vue"), true)
@@ -16660,7 +17242,7 @@ if (module.hot) {(function () {  module.hot.accept()
     hotAPI.update(id, module.exports, (typeof module.exports === "function" ? module.exports.options : module.exports).template)
   }
 })()}
-},{"vue":87,"vue-hot-reload-api":60}],101:[function(require,module,exports){
+},{"vue":100,"vue-hot-reload-api":73}],114:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16691,12 +17273,7 @@ exports.default = {
 
     route: {
         data: function data(transition) {
-            console.log('post route data');
-            var getUrl = this.$route.params.type;
-            if (this.$route.params.subtype !== undefined) {
-                getUrl += '/' + this.$route.params.subtype;
-            }
-            this.$http.get(getUrl).then(function (response) {
+            this.$http.get(this.$route.params.type).then(function (response) {
                 if (!response.data.posts.length) {
                     console.log('this category doesn\'t have any posts, go back.');
                     transition.abort();
@@ -16758,7 +17335,7 @@ if (module.hot) {(function () {  module.hot.accept()
     hotAPI.update(id, module.exports, (typeof module.exports === "function" ? module.exports.options : module.exports).template)
   }
 })()}
-},{"babel-runtime/core-js/promise":1,"vue":87,"vue-hot-reload-api":60}],102:[function(require,module,exports){
+},{"babel-runtime/core-js/promise":1,"vue":100,"vue-hot-reload-api":73}],115:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16910,54 +17487,115 @@ if (module.hot) {(function () {  module.hot.accept()
     hotAPI.update(id, module.exports, (typeof module.exports === "function" ? module.exports.options : module.exports).template)
   }
 })()}
-},{"../../../Vuex/actions":93,"../../../Vuex/getters":94,"babel-runtime/core-js/promise":1,"vue":87,"vue-hot-reload-api":60}],103:[function(require,module,exports){
+},{"../../../Vuex/actions":106,"../../../Vuex/getters":107,"babel-runtime/core-js/promise":1,"vue":100,"vue-hot-reload-api":73}],116:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-	value: true
+    value: true
 });
 exports.default = {
-	name: 'Team',
+    data: function data() {
+        return {
+            tasks: [{
+                text: 'Ruim de tafel af',
+                done: false
+            }, {
+                text: 'Doe de afwas',
+                done: true
+            }, {
+                text: 'Zet het vuilnis buiten',
+                done: false
+            }, {
+                text: 'Doe uw riem aan',
+                done: true
+            }, {
+                text: 'Blijf van de chokotoffs af',
+                done: false
+            }, {
+                text: 'Breng mij een pintje',
+                done: true
+            }],
+            newTask: ''
+        };
+    },
 
-	data: function data() {
-		return {
-			team: [],
-			animateThis: false
-		};
-	},
 
+    computed: {
+        completions: function completions() {
+            return this.tasks.filter(function (task) {
+                return task.done;
+            });
+        },
 
-	route: {
-		data: function data(transition) {
-			this.$http.get('team').then(function (response) {
-				transition.next(response.data);
-				this.animateThis = true;
-			});
-		},
-		deactivate: function deactivate(_ref) {
-			var next = _ref.next;
+        remaining: function remaining() {
+            return this.tasks.filter(function (task) {
+                return !task.done;
+            });
+        }
+    },
 
-			this.animateThis = false;
-			setTimeout(function () {
-				next();
-			}, 500);
-		}
-	}
+    filters: {
+        inProcess: function inProcess(tasks) {
+            return tasks.filter(function (task) {
+                return !task.done;
+            });
+        }
+    },
+
+    methods: {
+        addTask: function addTask(e) {
+            e.preventDefault();
+
+            if (!this.newTask) return;
+
+            this.tasks.push({
+                text: this.newTask,
+                done: false
+            });
+
+            this.newTask = '';
+        },
+
+        editTask: function editTask(task) {
+            this.removeTask(task);
+            this.newTask = task.text;
+        },
+
+        toggleTaskCompletion: function toggleTaskCompletion(task) {
+            task.done = !task.done;
+        },
+
+        completeAll: function completeAll() {
+            this.tasks.forEach(function (task) {
+                task.done = true;
+            });
+        },
+
+        removeTask: function removeTask(task) {
+            this.tasks.$remove(task);
+        },
+
+        clearCompleted: function clearCompleted() {
+            this.tasks = this.tasks.filter(function (task) {
+                return !task.done;
+            });
+        }
+    }
 };
 if (module.exports.__esModule) module.exports = module.exports.default
-;(typeof module.exports === "function"? module.exports.options: module.exports).template = "\n<!-- Page Title\n============================================= -->\n<section id=\"page-title\" class=\"page-title-mini animated\" transition=\"googletransition\" v-show=\"animateThis\">\n\n\t<div class=\"container clearfix\">\n\t\t<h1>Team</h1>\n\t</div>\n</section><!-- #page-title end -->\n\n<!-- Content\n============================================= -->\n<section id=\"content\">\n\n\t<div class=\"content-wrap\">\n\n\t\t<div class=\"container clearfix animated\" transition=\"googletransition\" v-show=\"animateThis\">\n\n\t\t\t<div class=\"col-md-4\" v-for=\"member in team\">\n\n\t\t\t\t<div class=\"team\">\n\t\t\t\t\t<div class=\"team-image\">\n\t\t\t\t\t\t<img v-bind:src=\"'img/users/'+ member.id +'/original.jpeg'\" alt=\"John Doe\">\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"team-desc\">\n\t\t\t\t\t\t<div class=\"team-title\"><h4>{{ member.first_name + ' ' + member.last_name }}</h4><span>CEO</span></div>\n\t\t\t\t\t\t<a href=\"#\" class=\"social-icon inline-block si-small si-light si-rounded si-facebook\">\n\t\t\t\t\t\t\t<i class=\"icon-facebook\"></i>\n\t\t\t\t\t\t\t<i class=\"icon-facebook\"></i>\n\t\t\t\t\t\t</a>\n\t\t\t\t\t\t<a href=\"#\" class=\"social-icon inline-block si-small si-light si-rounded si-twitter\">\n\t\t\t\t\t\t\t<i class=\"icon-twitter\"></i>\n\t\t\t\t\t\t\t<i class=\"icon-twitter\"></i>\n\t\t\t\t\t\t</a>\n\t\t\t\t\t\t<a href=\"#\" class=\"social-icon inline-block si-small si-light si-rounded si-gplus\">\n\t\t\t\t\t\t\t<i class=\"icon-gplus\"></i>\n\t\t\t\t\t\t\t<i class=\"icon-gplus\"></i>\n\t\t\t\t\t\t</a>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\n\t\t\t</div>\n\n\t\t</div>\n\n\t</div>\n</section><!-- #content end -->\n\n"
+;(typeof module.exports === "function"? module.exports.options: module.exports).template = "\n\n\n  \t\t\t\t<div class=\"container clearfix\">\n  \t\t\t\t\t<div id=\"tasks\">\n\n  \t\t\t\t\t\t<div class=\"col-md-6\">\n\n  \t\t\t\t\t\t\t<form @submit.prevent=\"addTask\">\n  \t\t\t\t\t\t\t\t<div class=\"form-group\">\n  \t\t\t\t\t\t\t\t\t<input v-model=\"newTask\" v-el=\"newTask\" class=\"form-control\" placeholder=\"verzin een taak\">\n\n  \t\t\t\t\t\t\t\t\t<button class=\"button button-blue topmargin-sm\">toevoegen</button>\n\n  \t\t\t\t\t\t\t\t</div>\n  \t\t\t\t\t\t\t</form>\n\n\n\n  \t\t\t\t\t\t\t<pre>{{ $data | json }}</pre>\n  \t\t\t\t\t\t</div>\n\n  \t\t\t\t\t\t<div class=\"col-md-6\">\n  \t\t\t\t\t\t\t<div v-show=\"remaining.length\">\n  \t\t\t\t\t\t\t\t<h1>Taken ({{ remaining.length }}) <button @click=\"completeAll\" class=\"button pull-right\">Check allemaal</button></h1>\n\n  \t\t\t\t\t\t\t\t<ol class=\"list-group\">\n  \t\t\t\t\t\t\t\t\t<li v-for=\"task in tasks  | inProcess | orderBy 'text'\" class=\"list-group-item\">\n  \t\t\t\t\t\t\t\t\t\t<span @dblclick=\"editTask(task)\">{{ task.text }}</span>\n\n  \t\t\t\t\t\t\t\t\t\t<div class=\"pull-right\">\n  \t\t\t\t\t\t\t\t\t\t\t<i @click=\"removeTask(task)\" class=\"fa fa-times\"></i>\n  \t\t\t\t\t\t\t\t\t\t\t<i @click=\"toggleTaskCompletion(task)\" class=\"icon-check-empty leftmargin-sm\"></i>\n  \t\t\t\t\t\t\t\t\t\t</div>\n\n  \t\t\t\t\t\t\t\t\t</li>\n  \t\t\t\t\t\t\t\t</ol>\n  \t\t\t\t\t\t\t</div>\n\n  \t\t\t\t\t\t\t<div v-show=\"completions.length &amp;&amp; remaining.length\" class=\"divider divider-short divider-center\"><i class=\"icon-folder-check\"></i></div>\n\n  \t\t\t\t\t\t\t<div v-show=\"completions.length\">\n  \t\t\t\t\t\t\t\t<h2>Gedaan ({{ completions.length }}) <button @click=\"clearCompleted\" class=\"button button-red pull-right\">Verwijder onderstaande</button></h2>\n\n  \t\t\t\t\t\t\t\t<ol class=\"list-group\">\n  \t\t\t\t\t\t\t\t\t<li v-for=\"task in tasks | filterBy true in 'done' | orderBy 'text'\" class=\"list-group-item\">\n  \t\t\t\t\t\t\t\t\t\t<span @dblclick=\"editTask(task)\">{{ task.text }}</span>\n\n  \t\t\t\t\t\t\t\t\t\t<div class=\"pull-right\">\n  \t\t\t\t\t\t\t\t\t\t\t<i @click=\"removeTask(task)\" class=\"fa fa-times\"></i>\n  \t\t\t\t\t\t\t\t\t\t\t<i @click=\"toggleTaskCompletion(task)\" class=\"icon-checkbox-checked leftmargin-sm\"></i>\n  \t\t\t\t\t\t\t\t\t\t</div>\n\n  \t\t\t\t\t\t\t\t\t</li>\n  \t\t\t\t\t\t\t\t</ol>\n  \t\t\t\t\t\t\t</div>\n  \t\t\t\t\t\t</div>\n\n\n  \t\t\t\t\t\t<div class=\"col-md-12\">\n    \t\t\t\t\t\t<h3>Vue code</h3>\n\n                <pre>                new Vue({\n                \tel:'#tasks',\n\n                \tdata:{\n                \t\ttasks:[\n                \t\t\t{text:'Ruim de tafel af',done:false},\n                \t\t\t{text:'Doe de afwas',done:true},\n                \t\t\t{text:'Zet het vuilnis buiten',done:false},\n                \t\t\t{text:'Doe uw riem aan',done:true},\n                \t\t\t{text:'Blijf van de chokotoffs af',done:false},\n                \t\t\t{text:'Breng mij een pintje',done:true}\n                \t\t],\n\n                \t\tnewTask :''\n                \t},\n\n                \tcomputed:{\n                \t\tcompletions: function(){\n                \t\t\treturn this.tasks.filter(function(task){\n                \t\t\t\treturn task.done;\n                \t\t\t});\n                \t\t},\n\n                \t\tremaining : function(){\n                \t\t\treturn this.tasks.filter(function(task){\n                \t\t\t\treturn ! task.done;\n                \t\t\t});\n                \t\t}\n                \t},\n\n                \tfilters:{\n                \t\tinProcess: function(tasks) {\n                \t\t\treturn tasks.filter(function(task){\n                \t\t\t\treturn ! task.done;\n                \t\t\t});\n                \t\t}\n                \t},\n\n                \tmethods:{\n                \t\taddTask: function(e){\n                \t\t\te.preventDefault();\n\n                \t\t\tif( ! this.newTask) return;\n\n                \t\t\tthis.tasks.push({\n                \t\t\t\ttext: this.newTask,\n                \t\t\t\tdone : false\n                \t\t\t});\n\n                \t\t\tthis.newTask = '';\n                \t\t},\n\n                \t\teditTask: function(task){\n                \t\t\tthis.removeTask(task);\n                \t\t\tthis.newTask = task.text;\n                \t\t\tthis.el.focus();\n                \t\t},\n\n                \t\ttoggleTaskCompletion: function(task){\n                \t\t\ttask.done = ! task.done;\n                \t\t},\n\n                \t\tcompleteAll: function(){\n                \t\t\tthis.tasks.forEach(function(task){\n                \t\t\t\ttask.done = true;\n                \t\t\t});\n                \t\t},\n\n                \t\tremoveTask: function(task){\n                \t\t\tthis.tasks.$remove(task);\n                \t\t},\n\n                \t\tclearCompleted: function(){\n                \t\t\tthis.tasks= this.tasks.filter(function(task){\n                \t\t\t\treturn ! task.done;\n                \t\t\t});\n                \t\t}\n                \t}\n                });\n                </pre>\n            </div>\n          </div>\n\n</div>"
 if (module.hot) {(function () {  module.hot.accept()
   var hotAPI = require("vue-hot-reload-api")
   hotAPI.install(require("vue"), true)
   if (!hotAPI.compatible) return
-  var id = "/Users/jonasvanderhaegen/Uni-t/testing/example-vue-vuex-vuerouter-laravel/resources/assets/js/vue/components/pages/users/team.vue"
+  var id = "/Users/jonasvanderhaegen/Uni-t/testing/example-vue-vuex-vuerouter-laravel/resources/assets/js/vue/components/pages/tasks/index.vue"
   if (!module.hot.data) {
     hotAPI.createRecord(id, module.exports)
   } else {
     hotAPI.update(id, module.exports, (typeof module.exports === "function" ? module.exports.options : module.exports).template)
   }
 })()}
-},{"vue":87,"vue-hot-reload-api":60}],104:[function(require,module,exports){
+},{"vue":100,"vue-hot-reload-api":73}],117:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -16966,7 +17604,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = {
 	data: function data() {
 		return {
-			menu: ['home', 'about', 'team', 'contact'],
+			menu: ['about', 'tasks'],
 			types: []
 		};
 	},
@@ -16987,7 +17625,7 @@ exports.default = {
 	}
 };
 if (module.exports.__esModule) module.exports = module.exports.default
-;(typeof module.exports === "function"? module.exports.options: module.exports).template = "\n\n<nav class=\"navbar navbar-inverse\">\n    <div class=\"container\">\n        <div class=\"navbar-header\">\n            <button type=\"button\" class=\"navbar-toggle collapsed\" data-toggle=\"collapse\" data-target=\"#navbar\" aria-expanded=\"false\" aria-controls=\"navbar\">\n                <span class=\"sr-only\">Toggle navigation</span>\n                <span class=\"icon-bar\"></span>\n                <span class=\"icon-bar\"></span>\n                <span class=\"icon-bar\"></span>\n            </button>\n            <a class=\"navbar-brand\" v-link=\"'/'\">Bootstrap theme</a>\n        </div>\n        <div id=\"navbar\" class=\"navbar-collapse collapse\">\n            <ul class=\"nav navbar-nav\">\n                <li v-for=\"link in menu\"><a v-link=\"{ name : link }\">{{ link | uppercase }}</a></li>\n                \n                <li class=\"dropdown\">\n                    <a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\" role=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                    \tCATEGORIES <span class=\"caret\"></span></a>\n                    <ul class=\"dropdown-menu\">\n                        <li v-for=\"type in types\"><a v-bind:class=\"{ 'tits' : type.subtypes }\" v-link=\"{ name : 'type.index', params: { type : type.seo[0].slug } }\">{{ type.title | uppercase }}</a></li>\n                    </ul>\n                </li>\n            </ul>\n            <languageswitcher></languageswitcher>\n        </div>\n        <!--/.nav-collapse -->\n    </div>\n</nav>\n\n"
+;(typeof module.exports === "function"? module.exports.options: module.exports).template = "\n\n<nav class=\"navbar navbar-inverse navbar-full\" style=\"border-radius:0;\">\n    <div class=\"container\">\n        <div class=\"navbar-header\">\n            <button type=\"button\" class=\"navbar-toggle collapsed\" data-toggle=\"collapse\" data-target=\"#navbar\" aria-expanded=\"false\" aria-controls=\"navbar\">\n                <span class=\"sr-only\">Toggle navigation</span>\n                <span class=\"icon-bar\"></span>\n                <span class=\"icon-bar\"></span>\n                <span class=\"icon-bar\"></span>\n            </button>\n            <a class=\"navbar-brand\" v-link=\"{ name : 'home' }\">Vue router + vuex</a>\n        </div>\n        <div id=\"navbar\" class=\"navbar-collapse collapse\">\n            <ul class=\"nav navbar-nav\">\n                <li v-for=\"link in menu\" v-link-active=\"\"><a v-link=\"{ name : link , activeClass: 'active' }\">{{ link | uppercase }}</a></li>\n\n                <li class=\"dropdown\">\n                    <a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\" role=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                    \tCATEGORIES <span class=\"caret\"></span></a>\n                    <ul class=\"dropdown-menu\">\n                        <li v-for=\"type in types\"><a v-bind:class=\"{ 'tits' : type.subtypes }\" v-link=\"{ name : 'type.index', params: { type : type.seo[0].slug } }\">{{ type.title | uppercase }}</a></li>\n                    </ul>\n                </li>\n            </ul>\n            <languageswitcher></languageswitcher>\n        </div>\n        <!--/.nav-collapse -->\n    </div>\n</nav>\n\n"
 if (module.hot) {(function () {  module.hot.accept()
   var hotAPI = require("vue-hot-reload-api")
   hotAPI.install(require("vue"), true)
@@ -16999,7 +17637,7 @@ if (module.hot) {(function () {  module.hot.accept()
     hotAPI.update(id, module.exports, (typeof module.exports === "function" ? module.exports.options : module.exports).template)
   }
 })()}
-},{"../widgets/languageswitcher.vue":105,"vue":87,"vue-hot-reload-api":60}],105:[function(require,module,exports){
+},{"../widgets/languageswitcher.vue":118,"vue":100,"vue-hot-reload-api":73}],118:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -17038,7 +17676,7 @@ if (module.hot) {(function () {  module.hot.accept()
     hotAPI.update(id, module.exports, (typeof module.exports === "function" ? module.exports.options : module.exports).template)
   }
 })()}
-},{"../../vuex/actions":109,"vue":87,"vue-hot-reload-api":60}],106:[function(require,module,exports){
+},{"../../vuex/actions":122,"vue":100,"vue-hot-reload-api":73}],119:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -17092,7 +17730,7 @@ if (module.hot) {(function () {  module.hot.accept()
     hotAPI.update(id, module.exports, (typeof module.exports === "function" ? module.exports.options : module.exports).template)
   }
 })()}
-},{"vue":87,"vue-hot-reload-api":60}],107:[function(require,module,exports){
+},{"vue":100,"vue-hot-reload-api":73}],120:[function(require,module,exports){
 'use strict';
 
 var _vue = require('vue');
@@ -17137,7 +17775,7 @@ var router = new _vueRouter2.default({
 var App = _vue2.default.extend(require('./app.vue'));
 router.start(App, '#app');
 
-},{"./app.vue":96,"./route-config":108,"./vuex/store":112,"vue":87,"vue-resource":75,"vue-router":86,"vuex-router-sync":89}],108:[function(require,module,exports){
+},{"./app.vue":109,"./route-config":121,"./vuex/store":125,"vue":100,"vue-resource":88,"vue-router":99,"vuex-router-sync":102}],121:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -17158,9 +17796,9 @@ function configRouter(router) {
             component: require('./components/pages/general/about.vue'),
             keepAlive: true
         },
-        '/team': {
-            name: 'team',
-            component: require('./components/pages/users/team.vue'),
+        '/tasks': {
+            name: 'tasks',
+            component: require('./components/pages/tasks/index.vue'),
             keepAlive: true
         },
         '/contact': {
@@ -17218,11 +17856,11 @@ function configRouter(router) {
     });
 }
 
-},{"./components/pages/contact/create.vue":97,"./components/pages/errors/404.vue":98,"./components/pages/general/about.vue":99,"./components/pages/general/home.vue":100,"./components/pages/posts/index.vue":101,"./components/pages/posts/show.vue":102,"./components/pages/users/team.vue":103}],109:[function(require,module,exports){
-arguments[4][93][0].apply(exports,arguments)
-},{"./mutation-types":110,"dup":93}],110:[function(require,module,exports){
-arguments[4][95][0].apply(exports,arguments)
-},{"dup":95}],111:[function(require,module,exports){
+},{"./components/pages/contact/create.vue":110,"./components/pages/errors/404.vue":111,"./components/pages/general/about.vue":112,"./components/pages/general/home.vue":113,"./components/pages/posts/index.vue":114,"./components/pages/posts/show.vue":115,"./components/pages/tasks/index.vue":116}],122:[function(require,module,exports){
+arguments[4][106][0].apply(exports,arguments)
+},{"./mutation-types":123,"dup":106}],123:[function(require,module,exports){
+arguments[4][108][0].apply(exports,arguments)
+},{"dup":108}],124:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -17260,7 +17898,7 @@ exports.default = (_TOGGLESCHEME$TOGGLEL = {}, _defineProperty(_TOGGLESCHEME$TOG
   localStorage.setItem('queue', JSON.stringify(state.music.queue.songs));
 }), _TOGGLESCHEME$TOGGLEL);
 
-},{"./mutation-types":110}],112:[function(require,module,exports){
+},{"./mutation-types":123}],125:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -17325,6 +17963,6 @@ if (module.hot) {
 
 exports.default = store;
 
-},{"../mutations":111,"vue":87,"vuex":90}]},{},[107]);
+},{"../mutations":124,"vue":100,"vuex":103}]},{},[120]);
 
 //# sourceMappingURL=main.js.map

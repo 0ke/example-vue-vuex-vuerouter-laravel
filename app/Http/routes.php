@@ -14,7 +14,7 @@
 Route::get('/', 'HomeController@home');
 
 Route::get('categories-for-menu', function () {
-    return response()->json(['categories' => App\Type::with('seo', 'subtypes')->get()]);
+    return response()->json(['categories' => App\Type::with('seo')->whereVisible(true)->get()]);
 });
 
 Route::get('article/{slug}', 'PostController@show');

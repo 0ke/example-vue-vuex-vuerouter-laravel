@@ -12,9 +12,9 @@ export function configRouter(router) {
             component: require('./components/pages/general/about.vue'),
             keepAlive: true
         },
-        '/team': {
-            name: 'team',
-            component: require('./components/pages/users/team.vue'),
+        '/tasks': {
+            name: 'tasks',
+            component: require('./components/pages/tasks/index.vue'),
             keepAlive: true
         },
         '/contact': {
@@ -22,7 +22,7 @@ export function configRouter(router) {
             component: require('./components/pages/contact/create.vue'),
             keepAlive: true
         },
-        
+
         '/:type': {
             name: 'type.index', // give the route a name
             component: require('./components/pages/posts/index.vue'),

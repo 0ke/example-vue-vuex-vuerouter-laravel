@@ -3,6 +3,8 @@
     <head>
         <title>Vuex + Vue-router + Laravel</title>
         <link href="{{ asset('css/app.css') }}" rel="stylesheet" type="text/css">
+        <link href="{{ asset('css/font-icons.css') }}" rel="stylesheet" type="text/css">
+
     </head>
     <body id="app">
 

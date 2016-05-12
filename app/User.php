@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 
 class User extends Model implements AuthenticatableContract,
-AuthorizableContract,
-CanResetPasswordContract
+    AuthorizableContract,
+    CanResetPasswordContract
 {
     use Authenticatable, Authorizable, CanResetPassword;
 
@@ -49,11 +49,6 @@ CanResetPasswordContract
     }
 
     // polymorphic many to many
-    public function sharelinks()
-    {
-        return $this->morphToMany(Sharelink::class, 'shareable');
-    }
-
     public function roles()
     {
         return $this->morphToMany(Role::class, 'roleable');

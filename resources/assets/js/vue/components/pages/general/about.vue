@@ -10,7 +10,7 @@
             <h4>Strongly recommend:</h4>
             <h5>before or after watching this to look at the documentation since I'm not going to explain everything. <a href="http://vuejs.github.io/vue-router/en/index.html">http://vuejs.github.io/vue-router</a></h5>
             <h5>Install this <a target="_newtab" href="https://chrome.google.com/webstore/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd">chrome extension</a>, it's super useful. After installation open a project that has vue in it and debug on true, in your console you'll get a tab vue.js devtools, see screenshots at extension.</h5>
-    
+
         </div>
     </div>
     <!-- /.row -->
@@ -41,7 +41,7 @@
 v-link="'your-url'"
 
 2/ but honestly naming routes makes it cleaner and maintainable if
-you have like a lot of urls, sure it's more work 
+you have like a lot of urls, sure it's more work
 but you won't have to worry about wrong urls.
 v-link="{ name : 'home' }"
 
@@ -107,7 +107,7 @@ router.map({
         component: require('./components/pages/contact/create.vue'),
         keepAlive: true
     },
-    
+
     '/:type': {
         name: 'type.index', // give the route a name
         component: require('./components/pages/posts/index.vue'),
@@ -175,7 +175,7 @@ router.beforeEach((transition) => {
                 <li><code>script</code> - purely vue code</li>
             </ul>
             <p>Off-topic but good to know: If i'm not mistaken a regular component can have data as object, a component loaded by vue-router however must be a function or it will you give you a vue warn. You can do this -> <code>data(): {}</code> if you're comfortable with ES6. <br> If not then use <code>data : function(){}</code>. </p>
-        
+
 <pre>
 route: {
     data: function(<strong class="red">transition</strong>) {
@@ -231,7 +231,7 @@ route: {
 
             <h5>What you see here is a route-component for a category and subcategory blogposts index page.</h5>
             <p>The timeouts at deactivate() and canreuse() are there to give my fadeOut animation the time to do it's thing. Without it would skip directly to the next page.</p>
-            
+
             <p>As you can see I marked the most important thing red, without it your page won't load and give a vue-warn. Response.data in this case contains only <code>{ posts }</code> object that has an array of objects, it will seed <code>posts:[]</code> in my already initialized data function.</p>
         </div>
 
@@ -244,13 +244,12 @@ route: {
                 shortlocale: state => state.shortlocale
             }
         },</code> which I then can access as a regular data object. I'm also using this for managing music with a queue. </p>
-            
+
         <p>Be aware! when you refresh: the mutated data in Vuex store is not saved and won't be saved. I save it in (browser) local- or sessionStorage, for now. </p>
 
         <p>Last but not least: You do need to import vuex and the store/index.js In the App component that is an extension. Go and take a look there. If you're interested this goes deeper about how vuex and redux works and is designed.</p>
 
         <div class="embed-responsive embed-responsive-16by9">
-          <iframe class="embed-responsive-item" src="https://www.youtube.com/embed/l1KHL-TX3qs"></iframe>
         </div>
         </div>
     </div>
@@ -274,7 +273,7 @@ route: {
 
 <script type="stylus">
 
-    var data = 
+    var data =
     {
       name: 'resources/assets/js/vue',
       children: [
@@ -368,12 +367,12 @@ route: {
             ]
         }
       ]
-    }	
+    }
 
 	export default {
 		name: 'About',
         components : {
-            item: require('../../widgets/navtree.vue') 
+            item: require('../../widgets/navtree.vue')
         },
         data(){
             return {
@@ -413,5 +412,5 @@ route: {
       padding-left: 2em;
       line-height: 1.7em;
       list-style-type: dot;
-    } 
+    }
 </style>

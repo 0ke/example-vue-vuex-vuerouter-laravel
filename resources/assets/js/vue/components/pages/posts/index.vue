@@ -62,12 +62,7 @@
 	    },
 	    route: {
 	        data: function(transition) {
-	            console.log('post route data');
-	            var getUrl = this.$route.params.type;
-	            if (this.$route.params.subtype !== undefined) {
-	                getUrl += '/' + this.$route.params.subtype
-	            }
-	            this.$http.get(getUrl).then(function(response) {
+	            this.$http.get(this.$route.params.type).then(function(response) {
 	                if (!response.data.posts.length) { 
 	                	console.log('this category doesn\'t have any posts, go back.');
 	                	transition.abort() 
