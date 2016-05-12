@@ -1,7 +1,6 @@
 <?php
 namespace App\Repositories;
 
-use App\Helpers\ImagePutter;
 use App\Post;
 use App\Role;
 use App\Seo;
@@ -11,7 +10,6 @@ use App\User;
 class Repository
 {
     public function __construct(
-        ImagePutter $imageputter,
         Post $post,
         Role $role,
         Seo $seo,
@@ -22,8 +20,6 @@ class Repository
         $this->seo = $seo;
         $this->type = $type;
         $this->user = $user;
-
-        $this->imageputter = $imageputter;
     }
 
     public function findSeoble($slug, $seoble_type = false)
