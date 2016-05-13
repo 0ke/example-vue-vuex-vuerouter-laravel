@@ -35,42 +35,66 @@
 
         <div class="col-lg-7">
 
-        <h3>Add this to any dom element you want</h3>
-<pre>
-1/ if not necessary to name your routes
-v-link="'your-url'"
+        <h3>Add this to any dom element you want, preferably on anchor tags like regular.</h3>
 
-2/ but honestly naming routes makes it cleaner and maintainable if
-you have like a lot of urls, sure it's more work
+<p><strong>1/ if you don't find it necessary to name your routes</strong>
+v-link="'your-url'"</p>
+
+<strong>2/ Honestly naming routes makes it cleaner and maintainable if</strong>
+<p>you have like a lot of urls, sure it's more work
 but you won't have to worry about wrong urls.
-v-link="{ name : 'home' }"
+v-link="{ name : 'home' }"</p>
 
-3/ Parameters
-v-link="{ name : 'subtype.index' , params : { type: 'news' , subtype : 'world' } }"
-</pre>
+<strong>3/ Parameters</strong>
+<p>v-link="{ name : 'subtype.index' , params : { type: 'news' , subtype : 'world' } }"</p>
+
+<strong>4/ V-link-active</strong>
+<p>Adding this as attribute to your dom elements like this: 
+<strong>a v-link-active</strong> 
+<p>you're basically done with indicating if you're on the current page. 
+By default it's going to give it that css class. You can also do something like 
+this: <strong>{ name : 'subtype.index' ,  activeClass: 'active' }</strong> for getting your 
+preferred css class. In some cases indicating with css is not happened on the anchor tag 
+but instead on it's parent dom element <strong>li</strong> for example. If you give that li 
+the attribute instead: 
+<strong>[li v-link-active][a { name : 'subtype.index' ,  activeClass: 'active' }][/a][/li] </strong> 
+-> Vue is going to know and give it closest dom element the css class.</p>
 
         <h3>main.js</h3>
 <pre
 class="language-javascript"
 data-jsonp="https://api.github.com/repos/leaverou/prism/contents/prism.js"
 >
+<strong>Import it</strong>
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import { configRouter } from './route-config'
 import { sync } from 'vuex-router-sync'
 
 Vue.config.debug = true;
+
+<strong>Use it</strong>
 Vue.use(VueResource)
 Vue.use(VueRouter)
 
+<strong>Set some router options if you like</strong>
 const router = new VueRouter({
   //history: true,
   saveScrollPosition: true,
   transitionOnLoad: true
 })
+
+<strong>This passes route data to the stated store</strong>
 sync(store, router)
+
+<strong>Passing the router object to route-config where it continues
+to pipe a whole route map and other route options like before and after.</strong>
 configRouter(router)
 
+<strong>Here you can set your own css classes for a dom element that has v-show
+attribute and transition="googletransition". V-show has a couple of events like 
+when it goes from false to true -> ENTER, from true to false -> LEAVE so in that
+case on a route component </strong>
 Vue.transition('googletransition', {
     enterClass: 'fadeInUp',
     leaveClass: 'fadeOutDown'
@@ -80,15 +104,18 @@ const App = Vue.extend(require('./app.vue'))
 router.start(App,'#app')
 </pre>
 
-        <h3>route-config.js</h3>
+<h3>On your html page or in vue component you set a router-view tag</h3>
+<p>Here, all the route components going to be rendered.</p>
+
+<h3>route-config.js</h3>
 <pre
 class="language-javascript"
 data-jsonp="https://api.github.com/repos/leaverou/prism/contents/prism.js"
 >
-// normal routes
+<strong>normal routes</strong>
 router.map({
     '/': {
-        name: 'home', // name route
+        name: 'home', <strong>named route</strong>
         component: require('./components/pages/general/home.vue'),
         keepAlive: true
     },
@@ -108,12 +135,19 @@ router.map({
         keepAlive: true
     },
 
-    '/:type': {
-        name: 'type.index', // give the route a name
-        component: require('./components/pages/posts/index.vue'),
+    <strong>nested routes and parameters</strong>
+
+    '/:type': { <strong>the : before your string makes it becomes a parameter</strong>
+        name: 'type.index', <strong>give the route a name</strong>
+        <strong>
+        this is now the parent component, if I go to one of the subroutes this 
+        component has to have a router-view tag in order to render the subcomponent.</strong>
+        component: require('./components/pages/posts/index.vue'), 
         subRoutes: {
             ':subtype': {
-                name: 'subtype.index', // give the route a name
+                <strong>My path here when I go to news/world</strong>
+                name: 'subtype.index', <strong>give the route a name</strong>
+                <strong>Sub component</strong>
                 component: require('./components/pages/posts/index.vue'),
                 keepAlive: true
             }
@@ -127,23 +161,24 @@ router.map({
     },
 
 
-    // not found handler
+    <strong>not found handler</strong>
     '*': {
         component: require('./components/pages/errors/404.vue')
     }
 })
 
-// redirect
+<strong>redirect</strong>
 router.redirect({
     '/info': '/about',
     '/hello/:userId': '/user/:userId'
 })
 
+<strong>
 // global before
 // 3 options:
 // 1. return a boolean
 // 2. return a Promise that resolves to a boolean
-// 3. call transition.next() or transition.abort()
+// 3. call transition.next() or transition.abort()</strong>
 router.beforeEach((transition) => {
     if (transition.to.path === '/forbidden') {
         router.app.authenticating = true
